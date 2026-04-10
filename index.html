@@ -81,7 +81,7 @@
 
   <div id="hud">
     <div class="hud-title">DIAGNOSTICA ATTIVA</div>
-    <div class="hud-row">MIC LEVEL: <span id="val-db" class="hud-val">-∞</span> dB</div>
+    <div class="hud-row">RAW IN: <span id="val-db" class="hud-val">-∞</span> dB</div>
     <div class="hud-row">FEEDBACK (Bocca): <span id="val-delay" class="hud-val">0</span>%</div>
     <div class="hud-row">MUTATION (Testa X): <span id="val-pitch" class="hud-val">0</span> semi</div>
     <div class="hud-row">CHORUS/FL (Testa Y): <span id="val-flanger" class="hud-val">0</span>%</div>
@@ -92,7 +92,7 @@
 
   <script>
     let video, facemesh, predictions = [];
-    let bridge, pitchShift, flanger, feedbackDelay, limiter, meter, masterVol;
+    let preAmp, pitchShift, flanger, feedbackDelay, limiter, meter, masterVol;
     
     let curPitch = 0, curDelay = 0, curFlanger = 0;
     let isMuted = false;
@@ -112,25 +112,29 @@
       msg.innerHTML = "<span style='color:#00ffff; font-weight:bold; font-size: 1.4rem;'>ATTESA AUTORIZZAZIONE...</span><br><br>Consenti l'accesso dal popup del browser.";
       
       try {
+        // Forza l'audio RAW disabilitando tutti i filtri di pulizia di Chrome/Safari
         const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, 
+          audio: { 
+            echoCancellation: false, 
+            noiseSuppression: false, 
+            autoGainControl: false 
+          }, 
           video: true 
         });
         
         msg.innerHTML = "<span style='color:#fff;'>Inizializzazione Motore Audio...</span>";
         await Tone.start();
         
-        // 1. CATTURA AUDIO NATIVA
         const audioContext = Tone.getContext().rawContext;
         const micSource = audioContext.createMediaStreamSource(stream);
         
-        // 2. CREAZIONE DEL PONTE (Assicura che l'audio non "scivoli via")
-        bridge = new Tone.Gain(1);
+        // --- 1. IL PRE-AMP (Boost +20dB) ---
+        // Alza brutalmente il volume in ingresso per sconfiggere i blocchi hardware
+        preAmp = new Tone.Volume(20);
         
-        // 3. SETUP EFFETTI
+        // --- 2. EFFETTI ---
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.05;
-        pitchShift.wet.value = 1; // FORZIAMO L'ATTIVAZIONE
 
         flanger = new Tone.Chorus(4, 2.5, 0.5).start();
         flanger.wet.value = 0;
@@ -138,15 +142,15 @@
         feedbackDelay = new Tone.FeedbackDelay("16n", 0.95);
         feedbackDelay.wet.value = 0;
 
-        masterVol = new Tone.Volume(-6);
+        masterVol = new Tone.Volume(-6); // Sicurezza uscita
         limiter = new Tone.Limiter(-1);
         meter = new Tone.Meter();
 
-        // 4. ROUTING ASSOLUTO E BLINDATO
-        Tone.connect(micSource, bridge);
-        Tone.connect(micSource, meter); // Misuratore grafico
+        // --- 3. ROUTING ---
+        Tone.connect(micSource, preAmp);
+        Tone.connect(preAmp, meter); // Il meter legge il segnale boostato
         
-        bridge.chain(pitchShift, flanger, feedbackDelay, masterVol, limiter, Tone.Destination);
+        preAmp.chain(pitchShift, flanger, feedbackDelay, masterVol, limiter, Tone.Destination);
 
         msg.innerHTML = "<span style='color:#ff2a5f;'>Caricamento Rete Neurale (AI)...</span>";
 
@@ -165,7 +169,6 @@
         msg.innerHTML = "<span style='color:#ff2a5f; font-weight:bold;'>ERRORE SISTEMA:</span><br>" + e.message;
         btn.style.display = 'inline-block';
         btn.innerText = "RIPROVA";
-        console.error("Dettaglio Errore:", e);
       }
     };
 
@@ -182,11 +185,11 @@
         btn.style.background = "transparent";
         btn.style.color = "#ff2a5f";
       }
-    };
+    }
 
     function draw() {
       let db = meter ? meter.getValue() : -100;
-      let volNorm = map(db, -40, -5, 0, 1, true); 
+      let volNorm = map(db, -20, 10, 0, 1, true); // Adattato per il Pre-Amp
       background(volNorm * 40, 0, 10, 60);
 
       if (!isRunning) return;
@@ -234,8 +237,7 @@
       noFill();
       beginShape(POINTS);
       for (let j = 0; j < pts.length; j++) {
-        let [x, y] = pts[j];
-        point(x + random(-explode, explode), y + random(-explode, explode));
+        point(pts[j][0] + random(-explode, explode), pts[j][1] + random(-explode, explode));
       }
       endShape();
     }
@@ -245,23 +247,24 @@
       const nose = pts[1];
       const topLip = pts[13], bottomLip = pts[14];
 
-      // BOCCA - DELAY FEEDBACK
+      // BOCCA - DELAY FEEDBACK (Alta Sensibilità)
+      // Si attiva da 5px di apertura e arriva al max a 25px
       let mouthDist = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
-      let targetDelay = mouthDist > 10 ? map(mouthDist, 10, 50, 0, 1, true) : 0;
-      curDelay = lerp(curDelay, targetDelay, 0.1);
-      feedbackDelay.wet.value = curDelay; // <-- ASSEGNAZIONE DIRETTA E SICURA
+      let targetDelay = mouthDist > 5 ? map(mouthDist, 5, 25, 0, 1, true) : 0;
+      curDelay = lerp(curDelay, targetDelay, 0.15); // Leggermente più veloce a reagire
+      feedbackDelay.wet.value = curDelay;
 
-      // ASSE X - PITCH SHIFT ESTREMO
+      // ASSE X - PITCH SHIFT
       let noseX = nose[0] - (video.width / 2);
       let targetPitch = Math.abs(noseX) > 30 ? map(noseX, -150, 150, -24, 24, true) * -1 : 0;
       curPitch = lerp(curPitch, targetPitch, 0.1);
-      pitchShift.pitch = curPitch; // <-- ASSEGNAZIONE DIRETTA
+      pitchShift.pitch = curPitch;
 
-      // ASSE Y - FLANGER / CHORUS
+      // ASSE Y - CHORUS/FLANGER
       let noseY = nose[1] - (video.height / 2);
       let targetFlanger = Math.abs(noseY) > 30 ? map(Math.abs(noseY), 30, 150, 0, 1, true) : 0;
       curFlanger = lerp(curFlanger, targetFlanger, 0.1);
-      flanger.wet.value = curFlanger; // <-- ASSEGNAZIONE DIRETTA E SICURA
+      flanger.wet.value = curFlanger;
 
       document.getElementById('val-delay').innerText = (curDelay * 100).toFixed(0);
       document.getElementById('val-pitch').innerText = curPitch.toFixed(1);
