@@ -13,7 +13,7 @@
 
     body { 
       margin: 0; padding: 0; background-color: #020205; color: #00ffff; 
-      font-family: 'Share Tech Mono', monospace; overflow: hidden; 
+      font-family: 'Share Tech Mono', monospace; overflow: hidden;
     }
     
     #ui-container {
@@ -107,7 +107,13 @@
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.04;
 
-        flanger = new Tone.Chorus(4, 2.5, 0.8).start(); 
+        flanger = new Tone.Chorus({
+          frequency: 10,
+          delayTime: 4,
+          depth: 1,
+          feedback: 0.9, // <--- Questo crea il fischio metallico
+          type: "sine"
+        }).start();
         flanger.wet.value = 0;
 
         spaceDelay = new Tone.FeedbackDelay("8n", 0.6);
@@ -215,11 +221,10 @@
       pitchShift.pitch = curPitch;
 
       // ASSE Y = Flanger (Solo quando si guarda in ALTO)
-      // Se headOffsetY è > 20 (guardi in alto), si attiva. Se guardi in basso, va a 0.
-      let targetFlanger = headOffsetY > 20 ? map(headOffsetY, 20, 150, 0, 1, true) : 0;
-      curFlanger = lerp(curFlanger, targetFlanger, 0.1);
+      let targetFlanger = headOffsetY > 10 ? map(headOffsetY, 10, 120, 0, 1, true) : 0;
+      curFlanger = lerp(curFlanger, targetFlanger, 0.2); 
       flanger.wet.value = curFlanger;
-    }
+      }
 
     // --- DISEGNO MASCHERA ---
     function drawFaceTracking(isCritical) {
