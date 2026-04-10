@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Human Synth - Live Mic Override</title>
+  <title>Human Synth - Pro Edition (Larsen Control)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -10,114 +10,186 @@
   <style>
     body { margin: 0; padding: 0; background-color: #000; color: #0f0; font-family: monospace; overflow: hidden; }
     
+    /* UI PRINCIPALE */
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.9); border: 2px solid #ff0055; padding: 40px; text-align: center;
-      z-index: 200; box-shadow: 0 0 20px rgba(255, 0, 85, 0.3);
+      background: rgba(0, 0, 0, 0.9); border: 2px solid #0ff; padding: 40px; text-align: center;
+      z-index: 200; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
     }
-
-    h1 { margin-top: 0; font-size: 1.8rem; letter-spacing: 3px; color: #ff0055; }
-
+    h1 { margin-top: 0; font-size: 1.8rem; letter-spacing: 3px; color: #0ff; }
     .btn {
       display: inline-block; padding: 15px 30px; margin: 10px; font-size: 1.2rem;
-      background: #ff0055; color: #fff; border: none; cursor: pointer; 
-      text-transform: uppercase; font-weight: bold; transition: 0.1s;
+      background: transparent; color: #0ff; border: 1px solid #0ff; cursor: pointer; 
+      text-transform: uppercase; font-weight: bold; transition: 0.2s;
     }
-    .btn:hover { background: #fff; color: #ff0055; }
-    .btn:active { transform: scale(0.95); }
+    .btn:hover { background: #0ff; color: #000; }
 
+    /* HUD E DATI LIVE */
     #hud {
       position: absolute; top: 20px; left: 20px; z-index: 100; display: none;
-      background: rgba(0, 0, 0, 0.8); padding: 15px; border: 1px solid #0f0; font-size: 0.9rem;
+      background: rgba(0, 0, 0, 0.7); padding: 15px; border-left: 3px solid #0ff; font-size: 0.9rem;
     }
     .hud-value { color: #fff; font-weight: bold; }
     
     /* PANIC BUTTON */
     #panic-btn {
-      position: absolute; bottom: 20px; right: 20px; z-index: 300; display: none;
+      position: absolute; bottom: 20px; left: 20px; z-index: 300; display: none;
       background: transparent; color: #ff0055; border: 2px solid #ff0055;
       padding: 10px 20px; font-size: 1rem; cursor: pointer; font-weight: bold;
     }
     #panic-btn.muted { background: #ff0055; color: #fff; }
+
+    /* DEV PANEL (CONTROLLO LARSEN E PARAMETRI) */
+    #dev-panel {
+      position: absolute; top: 20px; right: 20px; width: 300px; z-index: 250; display: none;
+      background: rgba(10, 10, 10, 0.95); border: 1px solid #333; padding: 20px;
+      backdrop-filter: blur(5px); color: #aaa; font-size: 0.85rem;
+    }
+    #dev-panel h3 { color: #fff; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; font-size: 1rem; }
+    .control-group { margin-bottom: 15px; }
+    label { display: flex; justify-content: space-between; margin-bottom: 5px; }
+    input[type=range] { width: 100%; cursor: pointer; accent-color: #0ff; }
+    .dev-val { color: #0ff; }
 
   </style>
 </head>
 <body>
 
   <div id="ui-container">
-    <h1>LIVE MIC OVERRIDE</h1>
+    <h1>HUMAN SYNTH // PRO</h1>
     <p style="color:#aaa; max-width: 400px; margin: 0 auto 20px;">
-      ATTENZIONE: Questo script catturerà l'audio ambientale e lo re-immetterà nelle casse. 
-      Preparati a feedback acustici. Usa il tasto PANIC in basso a destra in caso di emergenza.
+      Inizializzazione catena audio live. Prepara i controlli del Dev Panel per mitigare il feedback acustico.
     </p>
-    <button class="btn" id="start-btn">ATTIVA PORTALE (MICROFONO)</button>
+    <button class="btn" id="start-btn">AVVIA MOTORE AUDIO</button>
   </div>
 
   <div id="hud">
-    <div>AUDIO IN: <span id="val-db" class="hud-value">-∞ dB</span></div>
-    <hr style="border-color:#333; my: 10px;">
-    <div>PITCH (Testa L/R): <span id="val-pitch" class="hud-value">0 semitoni</span></div>
-    <div>REVERB (Bocca): <span id="val-reverb" class="hud-value">0%</span></div>
+    <div>LIVELLO MIC: <span id="val-db" class="hud-value">-∞ dB</span></div>
+    <hr style="border-color:#333; margin: 10px 0;">
+    <div>PITCH SHIFT: <span id="val-pitch" class="hud-value">0 semi</span></div>
+    <div>REVERB WET: <span id="val-reverb" class="hud-value">0%</span></div>
   </div>
 
-  <button id="panic-btn">🔇 MUTE (PANIC)</button>
+  <div id="dev-panel">
+    <h3>DEV PANEL // CALIBRAZIONE</h3>
+    
+    <div class="control-group">
+      <label><span>Input Gain (Vol)</span> <span id="lbl-gain" class="dev-val">0 dB</span></label>
+      <input type="range" id="ctrl-gain" min="-40" max="20" step="1" value="0">
+    </div>
+
+    <div class="control-group">
+      <label><span>Noise Gate (Taglio)</span> <span id="lbl-gate" class="dev-val">-40 dB</span></label>
+      <input type="range" id="ctrl-gate" min="-80" max="-10" step="1" value="-40">
+      <small style="color:#666">Sotto questa soglia il microfono è muto.</small>
+    </div>
+
+    <div class="control-group">
+      <label><span>Max Reverb (Limite)</span> <span id="lbl-maxrev" class="dev-val">80%</span></label>
+      <input type="range" id="ctrl-maxrev" min="10" max="100" step="1" value="80">
+      <small style="color:#666">Troppo riverbero innesca il Larsen prima.</small>
+    </div>
+
+    <div class="control-group">
+      <label><span>Sensibilità Bocca</span> <span id="lbl-mouth" class="dev-val">1.5x</span></label>
+      <input type="range" id="ctrl-mouth" min="0.5" max="3" step="0.1" value="1.5">
+    </div>
+  </div>
+
+  <button id="panic-btn">🔇 KILL SWITCH</button>
 
   <script>
     let video;
     let facemesh;
     let predictions = [];
     
-    // --- AUDIO NODES ---
-    let mic;
-    let pitchShift;
-    let reverb;
-    let meter;
+    // AUDIO NODES
+    let mic, inGain, gate, pitchShift, reverb, limiter, meter;
     
+    // VARIABILI DI STATO
     let currentPitch = 0;
     let currentReverb = 0;
     let isMuted = false;
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
-      document.getElementById('start-btn').addEventListener('click', startLiveExperience);
+      document.getElementById('start-btn').addEventListener('click', startSystem);
       document.getElementById('panic-btn').addEventListener('click', toggleMute);
+      
+      // Setup Event Listeners per il Dev Panel
+      setupDevControls();
     }
 
-    async function startLiveExperience() {
+    async function startSystem() {
       await Tone.start(); 
 
-      // --- SETUP CATENA AUDIO LIVE ---
+      // 1. CREAZIONE CATENA AUDIO PRO
       mic = new Tone.UserMedia();
-      pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.1 });
-      reverb = new Tone.Freeverb({ roomSize: 0.95, dampening: 1000 });
+      
+      // Gate: Chiude l'audio se è sotto una certa soglia (ferma i sussurri/ronzii)
+      gate = new Tone.Gate({ threshold: -40, smoothing: 0.2 });
+      
+      // Gain: Alza o abbassa il volume generale in ingresso
+      inGain = new Tone.Volume(0);
+      
+      // Effetti controllati dal viso
+      pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.05 });
+      reverb = new Tone.Freeverb({ roomSize: 0.9, dampening: 1000 });
       reverb.wet.value = 0;
+      
+      // Limiter: Il salvavita. Evita che il segnale superi lo zero e distrugga le casse
+      limiter = new Tone.Limiter(-2); 
+      
+      // Analizzatore visivo (collegato al microfono puro)
       meter = new Tone.Meter();
 
-      // Routing: Microfono -> Pitch -> Riverbero -> Master OUT
-      mic.chain(pitchShift, reverb, Tone.Destination);
-      // Analizzatore volume collegato direttamente al mic
+      // IL ROUTING: Mic -> Gate -> Gain -> Pitch -> Reverb -> Limiter -> Casse
+      mic.chain(gate, inGain, pitchShift, reverb, limiter, Tone.Destination);
       mic.connect(meter);
 
       try {
         await mic.open();
-        console.log("Microfono attivo e in ascolto.");
       } catch (e) {
-        alert("Errore: Impossibile accedere al microfono.");
-        return;
+        alert("Errore Mic. Dai i permessi al browser."); return;
       }
 
-      // Nascondi UI, mostra HUD e Panic Button
+      // 2. SETUP UI E WEBCAM
       document.getElementById('ui-container').style.display = 'none';
       document.getElementById('hud').style.display = 'block';
+      document.getElementById('dev-panel').style.display = 'block';
       document.getElementById('panic-btn').style.display = 'block';
 
-      // --- SETUP WEBCAM & AI ---
       video = createCapture(VIDEO);
       video.size(640, 480);
       video.hide();
 
       facemesh = ml5.facemesh(video, () => console.log("FaceMesh Pronto!"));
       facemesh.on("predict", results => { predictions = results; });
+    }
+
+    // GESTIONE DEL PANNELLO SVILUPPATORE
+    function setupDevControls() {
+      const getVal = id => parseFloat(document.getElementById(id).value);
+      
+      document.getElementById('ctrl-gain').addEventListener('input', (e) => {
+        let val = e.target.value;
+        document.getElementById('lbl-gain').innerText = `${val} dB`;
+        if (inGain) inGain.volume.rampTo(val, 0.1);
+      });
+
+      document.getElementById('ctrl-gate').addEventListener('input', (e) => {
+        let val = e.target.value;
+        document.getElementById('lbl-gate').innerText = `${val} dB`;
+        if (gate) gate.threshold = val;
+      });
+
+      document.getElementById('ctrl-maxrev').addEventListener('input', (e) => {
+        document.getElementById('lbl-maxrev').innerText = `${e.target.value}%`;
+      });
+
+      document.getElementById('ctrl-mouth').addEventListener('input', (e) => {
+        document.getElementById('lbl-mouth').innerText = `${e.target.value}x`;
+      });
     }
 
     function toggleMute() {
@@ -128,56 +200,49 @@
         btn.innerText = "🔊 UNMUTE";
         btn.classList.add('muted');
       } else {
-        btn.innerText = "🔇 MUTE (PANIC)";
+        btn.innerText = "🔇 KILL SWITCH";
         btn.classList.remove('muted');
       }
     }
 
     function draw() {
-      // Background che non cancella del tutto il frame precedente (effetto scia)
-      background(0, 0, 0, 80); 
+      background(0, 0, 0, 60); // Effetto trail visivo
 
       if (!video || !mic || mic.state !== "started") return;
 
-      // Misura volume per effetti visivi
+      // Dati visivi
       let db = meter.getValue();
-      let musicLevel = map(db, -60, -10, 0, 1, true); 
-      
+      let visualLevel = map(db, -50, -10, 0, 1, true); 
       document.getElementById('val-db').innerText = db.toFixed(1) + " dB";
 
       push();
-      translate(width, 0);
-      scale(-1, 1); // Specchia il video
+      translate(width, 0); scale(-1, 1); // Specchia
       
-      // Glitch sullo sfondo dipendente da quanto è forte l'audio nella stanza
-      let shakeX = random(-1, 1) * musicLevel * 30;
-      let shakeY = random(-1, 1) * musicLevel * 30;
-      let zoom = 1 + (musicLevel * 0.1);
-
-      translate(width/2 - video.width/2 + shakeX, height/2 - video.height/2 + shakeY);
-      scale(zoom);
+      // Glitch sullo sfondo (intensità collegata al volume in ingresso)
+      let shakeIntensity = visualLevel * 40;
+      translate(width/2 - video.width/2 + random(-shakeIntensity, shakeIntensity), 
+                height/2 - video.height/2 + random(-shakeIntensity, shakeIntensity));
       
-      // Opacità dinamica: più rumore = video più visibile
-      tint(255, 50 + (musicLevel * 200));
+      tint(255, 60 + (visualLevel * 150));
       image(video, 0, 0);
 
       if (predictions.length > 0) {
         processBiometrics();
-        drawTechMask(musicLevel);
+        drawTechMask(visualLevel);
       }
       pop();
     }
 
-    function drawTechMask(musicLevel) {
+    function drawTechMask(visualLevel) {
       const keypoints = predictions[0].scaledMesh;
       
-      // La maschera si "arrossa" quando apri la bocca (riverbero alto)
+      // Cromaticità reattiva al riverbero e al pitch
       let r = map(currentReverb, 0, 1, 0, 255);
-      let g = map(currentReverb, 0, 1, 255, 0);
-      let b = map(Math.abs(currentPitch), 0, 12, 0, 255); // Aumenta il blu se distorci il pitch
+      let g = map(Math.abs(currentPitch), 0, 12, 255, 0);
+      let b = 255; 
       
       stroke(r, g, b, 200);
-      strokeWeight(1 + (musicLevel * 4));
+      strokeWeight(1.5 + (visualLevel * 3));
       noFill();
 
       beginShape(POINTS);
@@ -191,28 +256,34 @@
     function processBiometrics() {
       const keypoints = predictions[0].scaledMesh;
       
+      // Lettura variabili dal Dev Panel
+      let maxRevLimit = parseFloat(document.getElementById('ctrl-maxrev').value) / 100;
+      let mouthSens = parseFloat(document.getElementById('ctrl-mouth').value);
+
       // --- 1. RIVERBERO (Bocca) ---
       const topLip = keypoints[13];
       const bottomLip = keypoints[14];
       let mouthDistance = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       
-      // Threshold leggermente alzato per evitare che respirare attivi il riverbero
-      currentReverb = map(mouthDistance, 8, 45, 0, 1, true);
+      // Calcolo base dell'apertura
+      let rawReverb = map(mouthDistance * mouthSens, 10, 50, 0, 1, true);
+      // Applica il limite massimo imposto dal Dev Panel per evitare Larsen estremi
+      currentReverb = Math.min(rawReverb, maxRevLimit);
+      
       reverb.wet.value = lerp(reverb.wet.value, currentReverb, 0.15);
 
       // --- 2. PITCH SHIFT (Testa L/R) ---
       const nose = keypoints[1];
       let noseCenterOffset = nose[0] - (video.width / 2);
       
-      // Range ristretto per evitare che movimenti minimi sballino l'audio
-      let targetPitch = map(noseCenterOffset, -120, 120, -12, 12, true);
-      targetPitch = targetPitch * -1; // Inverti asse per logica dello specchio
+      let targetPitch = map(noseCenterOffset, -150, 150, -12, 12, true);
+      targetPitch = targetPitch * -1; // Inverti asse
       
       currentPitch = lerp(currentPitch, targetPitch, 0.1);
       pitchShift.pitch = currentPitch;
 
-      // --- 3. AGGIORNA HUD ---
-      document.getElementById('val-pitch').innerText = currentPitch.toFixed(1) + " semitoni";
+      // AGGIORNA HUD
+      document.getElementById('val-pitch').innerText = currentPitch.toFixed(1);
       document.getElementById('val-reverb').innerText = (currentReverb * 100).toFixed(0) + "%";
     }
 
