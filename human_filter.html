@@ -60,7 +60,7 @@
 
   <script>
     let video, facemesh, predictions = [];
-    let mic, pitchShift, chorus, feedbackDelay, limiter, meter;
+    let mic, pitchShift, flanger, feedbackDelay, limiter, meter;
     let curPitch = 0, curDelay = 0, curChorus = 0;
     let isRunning = false, step = 0;
 
@@ -85,8 +85,13 @@
           pitchShift = new Tone.PitchShift(0);
           pitchShift.windowSize = 0.03; // Più reattivo
 
-          chorus = new Tone.Chorus(4, 2.5, 0.5).start(); // Chorus per asse Y
-          chorus.wet.value = 0;
+          // Parametri: (delayTime, depth, feedback)
+          flanger = new Tone.Flanger({
+            delayTime: 0.5, 
+            depth: 1, 
+            feedback: 0.8 
+          }).connect(feedbackDelay); // Collega alla catena
+          flanger.wet.value = 0;
 
           feedbackDelay = new Tone.FeedbackDelay("16n", 0.8);
           feedbackDelay.wet.value = 0;
@@ -95,7 +100,7 @@
           limiter = new Tone.Limiter(-6); 
           meter = new Tone.Meter();
 
-          mic.chain(pitchShift, chorus, feedbackDelay, limiter, Tone.Destination);
+          mic.chain(pitchShift, flanger, feedbackDelay, limiter, Tone.Destination);
           mic.connect(meter);
 
           await mic.open();
@@ -174,12 +179,11 @@
       curPitch = lerp(curPitch, targetPitch, 0.1);
       pitchShift.pitch = curPitch;
 
-      // 2. ASSE Y -> CHORUS (Su e Giù)
+      // 2. ASSE Y -> FLANGER (Su e Giù)
       let noseY = nose[1] - (video.height / 2);
-      // Più ti allontani dal centro verticale, più il chorus è "wet"
-      let targetChorus = map(Math.abs(noseY), 20, 150, 0, 1, true);
-      curChorus = lerp(curChorus, targetChorus, 0.1);
-      chorus.wet.value = curChorus;
+      let targetFlanger = map(Math.abs(noseY), 20, 150, 0, 1, true);
+      curChorus = lerp(curChorus, targetFlanger, 0.1); // usiamo curChorus come variabile di appoggio
+      flanger.wet.value = curChorus;
 
       // 3. BOCCA -> DELAY (Il feedback loop)
       const topLip = pts[13], bottomLip = pts[14];
