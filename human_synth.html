@@ -2,17 +2,15 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Human Synth - Pro Edition (Delay & Pitch Controller)</title>
+  <title>Human Synth - Live VJ & DJ Filter</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   
   <style>
-    /* === STILI GLOBALI === */
     body { margin: 0; padding: 0; background-color: #000; color: #0f0; font-family: 'Courier New', monospace; overflow: hidden; }
     
-    /* === MENU INIZIALE (ONBOARDING) === */
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 0, 0, 0.9); border: 2px solid #0ff; padding: 40px; text-align: center;
@@ -21,19 +19,16 @@
     h1 { margin-top: 0; font-size: 1.8rem; letter-spacing: 3px; color: #0ff; }
     .btn {
       display: inline-block; padding: 15px 30px; margin: 10px; font-size: 1.2rem;
-      background: transparent; color: #0ff; border: 1px solid #0ff; cursor: pointer; 
-      text-transform: uppercase; font-weight: bold; transition: 0.2s;
+      background: transparent; color: #0ff; border: 1px solid #0ff; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s;
     }
     .btn:hover { background: #0ff; color: #000; }
 
-    /* === HUD UTENTE (DATI LIVE) === */
     #hud {
       position: absolute; top: 20px; left: 20px; z-index: 100; display: none;
       background: rgba(0, 0, 0, 0.8); padding: 15px; border-left: 4px solid #0ff; font-size: 0.95rem;
     }
     .hud-value { color: #fff; font-weight: bold; }
     
-    /* === KILL SWITCH (PANIC BUTTON) === */
     #panic-btn {
       position: absolute; bottom: 20px; left: 20px; z-index: 300; display: none;
       background: transparent; color: #ff0055; border: 2px solid #ff0055;
@@ -41,7 +36,6 @@
     }
     #panic-btn.muted { background: #ff0055; color: #fff; }
 
-    /* === PANNELLO SVILUPPATORE (DEV PANEL) === */
     #dev-panel {
       position: absolute; top: 20px; right: 20px; width: 320px; z-index: 250; display: none;
       background: rgba(10, 10, 10, 0.95); border: 1px solid #333; padding: 20px;
@@ -53,190 +47,160 @@
     input[type=range] { width: 100%; cursor: pointer; accent-color: #0ff; }
     .dev-val { color: #0ff; }
     .dev-desc { display: block; color: #666; font-size: 0.75rem; margin-top: 3px; line-height: 1.2; }
-
   </style>
 </head>
 <body>
 
   <div id="ui-container">
-    <h1>HUMAN SYNTH // LIVE</h1>
+    <h1>HUMAN SYNTH // 3D CONTROL</h1>
     <p style="color:#aaa; max-width: 450px; margin: 0 auto 20px;">
-      Live Mic Override attivo. Usa il Dev Panel per mitigare il feedback acustico. 
-      Attendi il caricamento del modello FaceMesh.
+      Inizializzazione Routing Avanzato: X (Pitch), Y (DJ Filter), Z/Bocca (Delay).
     </p>
     <button class="btn" id="start-btn">Inizializza Audio Context</button>
   </div>
 
   <div id="hud">
-    <div>MIC LEVEL (RMS): <span id="val-db" class="hud-value">-∞ dB</span></div>
+    <div>MIC LEVEL: <span id="val-db" class="hud-value">-∞ dB</span></div>
     <hr style="border-color:#333; margin: 10px 0;">
-    <div>PITCH SHIFT: <span id="val-pitch" class="hud-value">0 semi</span></div>
-    <div>DELAY WET: <span id="val-delay" class="hud-value">0%</span></div>
+    <div>PITCH (X): <span id="val-pitch" class="hud-value">0 semi</span></div>
+    <div>DELAY (Bocca): <span id="val-delay" class="hud-value">0%</span></div>
+    <div>FILTER (Y): <span id="val-filter" class="hud-value" style="color: #ffcc00;">BYPASS</span></div>
   </div>
 
   <div id="dev-panel">
-    <h3>Dev Panel // Audio Matrix</h3>
+    <h3>Dev Panel // Matrix</h3>
     
     <div class="control-group">
       <label><span>Input Gain</span> <span id="lbl-gain" class="dev-val">0 dB</span></label>
       <input type="range" id="ctrl-gain" min="-40" max="20" step="1" value="0">
-      <span class="dev-desc">Guadagno pre-FX in ingresso.</span>
     </div>
 
     <div class="control-group">
-      <label><span>Noise Gate Threshold</span> <span id="lbl-gate" class="dev-val">-40 dB</span></label>
+      <label><span>Noise Gate</span> <span id="lbl-gate" class="dev-val">-40 dB</span></label>
       <input type="range" id="ctrl-gate" min="-80" max="-10" step="1" value="-40">
-      <span class="dev-desc">Silenzia i segnali sotto questa soglia per prevenire hum e ronzii.</span>
     </div>
 
     <div class="control-group">
-      <label><span>Max Delay Wetness</span> <span id="lbl-maxdelay" class="dev-val">80%</span></label>
+      <label><span>Max Delay Wet</span> <span id="lbl-maxdelay" class="dev-val">80%</span></label>
       <input type="range" id="ctrl-maxdelay" min="10" max="100" step="1" value="80">
-      <span class="dev-desc">Hard-limit per il mix dell'effetto Delay. Previene feedback fuori controllo.</span>
     </div>
 
     <div class="control-group">
-      <label><span>Expression Multiplier</span> <span id="lbl-mouth" class="dev-val">1.5x</span></label>
-      <input type="range" id="ctrl-mouth" min="0.5" max="3" step="0.1" value="1.5">
-      <span class="dev-desc">Moltiplicatore sensibilità apertura bocca.</span>
+      <label><span>Asse Y Sensibilità</span> <span id="lbl-ysens" class="dev-val">1.0x</span></label>
+      <input type="range" id="ctrl-ysens" min="0.5" max="3" step="0.1" value="1.0">
+      <span class="dev-desc">Moltiplica la reattività della testa su/giù per i filtri.</span>
     </div>
   </div>
 
   <button id="panic-btn">🔇 Mute Master Output</button>
 
   <script>
-    // --- VARIABILI GLOBALI GRAFICA E AI ---
-    let video;
-    let facemesh;
+    let video, facemesh;
     let predictions = [];
     
-    // --- NODI AUDIO TONE.JS ---
-    let mic, inGain, gate, pitchShift, feedbackDelay, limiter, meter;
+    // Nodi Audio
+    let mic, inGain, gate, pitchShift, feedbackDelay, djLowpass, djHighpass, limiter, meter;
     
-    // --- VARIABILI DI STATO ---
+    // Variabili di Stato
     let currentPitch = 0;
     let currentDelayWet = 0;
+    let currentLpfFreq = 20000;
+    let currentHpfFreq = 0;
     let isMuted = false;
 
-    // --- SETUP INIZIALE (eseguito al caricamento) ---
     function setup() {
       createCanvas(windowWidth, windowHeight);
       document.getElementById('start-btn').addEventListener('click', startSystem);
       document.getElementById('panic-btn').addEventListener('click', toggleMute);
-      
       initDevPanelListeners();
     }
 
-    // --- INIZIALIZZAZIONE SISTEMA AUDIO E VIDEO ---
     async function startSystem() {
-      await Tone.start(); // Sblocca l'audio nel browser (Policy)
+      await Tone.start(); 
 
-      // 1. SETUP CATENA AUDIO (Signal Flow)
       mic = new Tone.UserMedia();
       gate = new Tone.Gate({ threshold: -40, smoothing: 0.2 });
       inGain = new Tone.Volume(0);
-      
-      // Pitch Shift: WindowSize piccolo per minimizzare latenza e artefatti granulari
       pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.03 });
-      
-      // Feedback Delay: "8n" = Ottavi. Feedback al 60% per code evidenti. Inizia Dry.
       feedbackDelay = new Tone.FeedbackDelay("8n", 0.6);
       feedbackDelay.wet.value = 0; 
       
-      // Brickwall Limiter a -2dBFS per proteggere l'hardware
+      // --- I DUE FILTRI DJ (In Serie) ---
+      // Lowpass: Parte aperto a 20kHz (non taglia nulla)
+      djLowpass = new Tone.Filter(20000, "lowpass");
+      // Highpass: Parte chiuso a 0Hz (non taglia nulla)
+      djHighpass = new Tone.Filter(0, "highpass");
+      
       limiter = new Tone.Limiter(-2); 
       meter = new Tone.Meter();
 
-      // Routing audio: Mic -> Gate -> Gain -> Pitch -> Delay -> Limiter -> Casse
-      mic.chain(gate, inGain, pitchShift, feedbackDelay, limiter, Tone.Destination);
-      mic.connect(meter); // Meter legge il segnale puro prima degli effetti
+      // Routing: ... -> Pitch -> Delay -> Lowpass -> Highpass -> Master
+      mic.chain(gate, inGain, pitchShift, feedbackDelay, djLowpass, djHighpass, limiter, Tone.Destination);
+      mic.connect(meter);
 
       try {
         await mic.open();
-      } catch (e) {
-        alert("Errore Mic. Verifica permessi del browser."); return;
-      }
+      } catch (e) { alert("Errore Mic."); return; }
 
-      // 2. CAMBIO STATO UI
       document.getElementById('ui-container').style.display = 'none';
       document.getElementById('hud').style.display = 'block';
       document.getElementById('dev-panel').style.display = 'block';
       document.getElementById('panic-btn').style.display = 'block';
 
-      // 3. SETUP WEBCAM E FACEMESH
       video = createCapture(VIDEO);
       video.size(640, 480);
       video.hide();
-
-      facemesh = ml5.facemesh(video, () => console.log("Modello FaceMesh inizializzato."));
+      facemesh = ml5.facemesh(video, () => console.log("FaceMesh ON."));
       facemesh.on("predict", results => { predictions = results; });
     }
 
-    // --- ASSEGNAZIONE EVENTI DEL DEV PANEL ---
     function initDevPanelListeners() {
-      document.getElementById('ctrl-gain').addEventListener('input', (e) => {
-        let val = e.target.value;
-        document.getElementById('lbl-gain').innerText = `${val} dB`;
-        if (inGain) inGain.volume.rampTo(val, 0.1);
+      document.getElementById('ctrl-gain').addEventListener('input', e => {
+        document.getElementById('lbl-gain').innerText = `${e.target.value} dB`;
+        if (inGain) inGain.volume.rampTo(e.target.value, 0.1);
       });
-
-      document.getElementById('ctrl-gate').addEventListener('input', (e) => {
-        let val = e.target.value;
-        document.getElementById('lbl-gate').innerText = `${val} dB`;
-        if (gate) gate.threshold = val;
+      document.getElementById('ctrl-gate').addEventListener('input', e => {
+        document.getElementById('lbl-gate').innerText = `${e.target.value} dB`;
+        if (gate) gate.threshold = e.target.value;
       });
-
-      document.getElementById('ctrl-maxdelay').addEventListener('input', (e) => {
+      document.getElementById('ctrl-maxdelay').addEventListener('input', e => {
         document.getElementById('lbl-maxdelay').innerText = `${e.target.value}%`;
       });
-
-      document.getElementById('ctrl-mouth').addEventListener('input', (e) => {
-        document.getElementById('lbl-mouth').innerText = `${e.target.value}x`;
+      document.getElementById('ctrl-ysens').addEventListener('input', e => {
+        document.getElementById('lbl-ysens').innerText = `${e.target.value}x`;
       });
     }
 
-    // --- GESTIONE KILL SWITCH ---
     function toggleMute() {
       isMuted = !isMuted;
       Tone.Destination.mute = isMuted;
       const btn = document.getElementById('panic-btn');
       if (isMuted) {
-        btn.innerText = "🔊 UNMUTE MASTER";
-        btn.classList.add('muted');
+        btn.innerText = "🔊 UNMUTE MASTER"; btn.classList.add('muted');
       } else {
-        btn.innerText = "🔇 MUTE MASTER OUTPUT";
-        btn.classList.remove('muted');
+        btn.innerText = "🔇 MUTE MASTER OUTPUT"; btn.classList.remove('muted');
       }
     }
 
-    // --- LOOP GRAFICO PRINCIPALE (60fps) ---
     function draw() {
-      // Effetto "Trail" (Scia video) - non pulisce completamente il frame
-      background(0, 0, 0, 60); 
-
+      background(0, 0, 0, 70); 
       if (!video || !mic || mic.state !== "started") return;
 
-      // Estrazione e mappatura Volume in dB
       let db = meter.getValue();
-      let visualLevel = map(db, -50, -10, 0, 1, true); 
+      let visualLevel = map(db, -40, -10, 0, 1, true); 
       document.getElementById('val-db').innerText = db.toFixed(1) + " dB";
 
       push();
       translate(width, 0); 
-      scale(-1, 1); // Flip orizzontale (Effetto specchio)
+      scale(-1, 1); 
       
-      // Glitch position shift in base al volume della stanza
-      let shakeIntensity = visualLevel * 40;
-      translate(
-        width/2 - video.width/2 + random(-shakeIntensity, shakeIntensity), 
-        height/2 - video.height/2 + random(-shakeIntensity, shakeIntensity)
-      );
+      let shakeIntensity = visualLevel * 30;
+      translate(width/2 - video.width/2 + random(-shakeIntensity, shakeIntensity), 
+                height/2 - video.height/2 + random(-shakeIntensity, shakeIntensity));
       
-      // Rendering video base (opacità aumenta col rumore)
-      tint(255, 60 + (visualLevel * 150));
+      tint(255, 60 + (visualLevel * 100));
       image(video, 0, 0);
 
-      // Rendering livello AI se disponibile
       if (predictions.length > 0) {
         processBiometrics();
         drawTechMask(visualLevel);
@@ -244,15 +208,18 @@
       pop();
     }
 
-    // --- DISEGNO DELLA MASCHERA WIREFRAME ---
     function drawTechMask(visualLevel) {
       const keypoints = predictions[0].scaledMesh;
       
-      // La maschera sfuma al rosso (Delay) e al verde/blu (Pitch)
       let r = map(currentDelayWet, 0, 1, 0, 255);
       let g = map(Math.abs(currentPitch), 0, 12, 255, 0);
-      let b = 255; 
       
+      // Il blu cambia in base a quale filtro stiamo usando
+      // Se Highpass (Alti), diventa molto ciano/bianco. Se Lowpass (Bassi), scende a zero.
+      let b = 255;
+      if (currentHpfFreq > 500) b = 255; 
+      else if (currentLpfFreq < 5000) b = 0;
+
       stroke(r, g, b, 200);
       strokeWeight(1.5 + (visualLevel * 3));
       noFill();
@@ -265,64 +232,73 @@
       endShape();
     }
 
-    // --- MOTORE DI CALCOLO BIOMETRICO -> AUDIO ---
     function processBiometrics() {
       const keypoints = predictions[0].scaledMesh;
       
-      // Parametri Dev Panel
       let maxDelayLimit = parseFloat(document.getElementById('ctrl-maxdelay').value) / 100;
-      let expMulti = parseFloat(document.getElementById('ctrl-mouth').value);
+      let ySens = parseFloat(document.getElementById('ctrl-ysens').value);
 
-      // ---------------------------------------------------------
-      // 1. GESTIONE DELAY (Apertura Labbra)
-      // ---------------------------------------------------------
+      // --- 1. DELAY (Bocca) ---
       const topLip = keypoints[13];
       const bottomLip = keypoints[14];
-      let rawMouthDist = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
-      let adjustedMouth = rawMouthDist * expMulti;
+      let adjustedMouth = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       
       let targetDelayWet = 0;
-      
-      // DEADZONE BOCCA: Sotto i 15px (chiusa), il delay è forzato a 0
-      if (adjustedMouth > 15) {
-        targetDelayWet = map(adjustedMouth, 15, 60, 0, 1, true);
-      }
-      
-      // Applica Limite e Smoothing
+      if (adjustedMouth > 15) { targetDelayWet = map(adjustedMouth, 15, 60, 0, 1, true); }
       currentDelayWet = Math.min(targetDelayWet, maxDelayLimit);
       feedbackDelay.wet.rampTo(currentDelayWet, 0.1);
 
-
-      // ---------------------------------------------------------
-      // 2. GESTIONE PITCH SHIFT (Offset Naso Asse X)
-      // ---------------------------------------------------------
+      // --- 2. PITCH SHIFT (Asse X) ---
       const nose = keypoints[1];
-      let noseOffset = nose[0] - (video.width / 2);
+      let noseOffsetX = nose[0] - (video.width / 2);
       
-      // Range: ±150px dal centro del video mappati su ±12 semitoni (un'ottava)
-      let targetPitch = map(noseOffset, -150, 150, -12, 12, true);
-      targetPitch = targetPitch * -1; // Inversione per logica specchio
+      let targetPitch = map(noseOffsetX, -150, 150, -12, 12, true) * -1; 
       
-      // DEADZONE TESTA: ±25px dal centro, nessun pitch shift
-      if (Math.abs(noseOffset) < 25) {
-        targetPitch = 0;
-        pitchShift.wet.rampTo(0, 0.1); // Hard bypass = suono dry
+      if (Math.abs(noseOffsetX) < 25) {
+        targetPitch = 0; pitchShift.wet.rampTo(0, 0.1);
       } else {
-        pitchShift.wet.rampTo(1, 0.1); // Attiva mix effetti
+        pitchShift.wet.rampTo(1, 0.1);
       }
-      
-      // Smoothing del movimento pitch (previene "scalini" audio bruschi)
       currentPitch = lerp(currentPitch, targetPitch, 0.1);
       pitchShift.pitch = currentPitch;
 
-      // ---------------------------------------------------------
-      // 3. AGGIORNAMENTO UI UTENTE
-      // ---------------------------------------------------------
+      // --- 3. DJ FILTER (Asse Y) ---
+      let noseOffsetY = (nose[1] - (video.height / 2)) * ySens;
+      let targetLpf = 20000;
+      let targetHpf = 0;
+      let filterStatus = "BYPASS";
+      let filterColor = "#ffcc00"; // Giallo neutro
+
+      // DEADZONE VERTICALE: ±30px dal centro (Nessun filtro)
+      if (noseOffsetY < -30) {
+        // Testa in SU -> High Pass Filter (Isola gli alti)
+        targetHpf = map(noseOffsetY, -30, -150, 0, 6000, true);
+        filterStatus = "HIGH-PASS";
+        filterColor = "#00ffff"; // Ciano per aria/alti
+      } else if (noseOffsetY > 30) {
+        // Testa in GIÙ -> Low Pass Filter (Isola i bassi)
+        // Scendiamo fino a 200Hz per un suono bello cupo
+        targetLpf = map(noseOffsetY, 30, 150, 20000, 200, true);
+        filterStatus = "LOW-PASS";
+        filterColor = "#ff0055"; // Rosso scuro per bassi
+      }
+
+      currentLpfFreq = lerp(currentLpfFreq, targetLpf, 0.1);
+      currentHpfFreq = lerp(currentHpfFreq, targetHpf, 0.1);
+
+      // Aggiorna le frequenze in modo fluido per non generare click
+      djLowpass.frequency.rampTo(currentLpfFreq, 0.1);
+      djHighpass.frequency.rampTo(currentHpfFreq, 0.1);
+
+      // --- 4. AGGIORNAMENTO HUD ---
       document.getElementById('val-pitch').innerText = currentPitch.toFixed(1) + " semi";
       document.getElementById('val-delay').innerText = (currentDelayWet * 100).toFixed(0) + "%";
+      
+      const filterHUD = document.getElementById('val-filter');
+      filterHUD.innerText = filterStatus;
+      filterHUD.style.color = filterColor;
     }
 
-    // Ricalcola il layout se l'utente ridimensiona la finestra
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
   </script>
 </body>
