@@ -39,7 +39,7 @@
       background: transparent; color: #00ffff; border: 2px solid #00ffff;
       cursor: pointer; text-transform: uppercase; font-weight: bold; 
       border-radius: 3px; letter-spacing: 2px; transition: all 0.3s;
-      position: relative; z-index: 1000; /* Forza il bottone in primo piano */
+      position: relative; z-index: 1000;
     }
     .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
 
@@ -91,7 +91,7 @@
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.position(0, 0);
       canvas.style('z-index', '-1');
-      canvas.style('pointer-events', 'none'); // IMPEDISCE AL CANVAS DI BLOCCARE I CLICK!
+      canvas.style('pointer-events', 'none'); 
     }
 
     // --- BINDING SICURO DEL PULSANTE ---
@@ -150,7 +150,7 @@
         video.hide();
 
       } catch (e) {
-        msg.innerHTML = "<span style='color:#ff0033;'>ERRORE SISTEMA:</span> " + e.message + "<br><br>Controlla la Developer Console (F12) per i dettagli.";
+        msg.innerHTML = "<span style='color:#ff0033;'>ERRORE SISTEMA:</span> " + e.message;
         btn.style.display = 'inline-block'; 
         btn.innerText = "RIPROVA";
         console.error("Dettaglio Errore:", e);
@@ -207,7 +207,8 @@
         rect(0, 0, width, height);
         fill(255);
         textAlign(CENTER, CENTER);
-        textSize(4rem);
+        // FIX ERRORE DI SINTASSI: uso numeri interi per textSize invece di stringhe CSS
+        textSize(64); 
         text("⚠ HULL INTEGRITY CRITICAL ⚠", width/2 + random(-5,5), height/2 + random(-5,5));
       }
     }
@@ -234,7 +235,8 @@
       rect(x, y, fillWidth, rectHeight);
 
       textAlign(CENTER, BOTTOM);
-      textSize(1.2rem);
+      // FIX ERRORE DI SINTASSI: uso numeri interi per textSize
+      textSize(16); 
       if (isCritical && frameCount % 4 < 2) {
         fill(255, 0, 50);
         text("LARSEN EFFECT ALERT // FEEDBACK OVERLOAD", width/2, y - 10);
