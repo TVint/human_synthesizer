@@ -16,7 +16,6 @@
       font-family: 'Share Tech Mono', monospace; overflow: hidden; 
     }
     
-    /* --- INTERFACCIA DI AVVIO/ERRORE BRUTALISTA NEON --- */
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(2, 5, 15, 0.95); border: 1px solid #00ffff; 
@@ -51,12 +50,10 @@
   <div id="ui-container">
     <h1>VOID RIDER // LINK.START()</h1>
     <div id="status-msg">
-      <b>SISTEMA HUD NEURALE V2.0 // CALIBRAZIONE</b><br><br>
-      Attivando il link, i propulsori e i reattori audio saranno vincolati ai tuoi movimenti biometrici.<br>
-      <br>
-      > Bocca = Space Reverb / Delay (Vuoto Spaziale)<br>
-      > Testa X (Dx/Sx) = Pitch Shift (Gravità)<br>
-      > Testa Y (Su) = Jet Flanger (Propulsori)<br>
+      <b>SISTEMA HUD NEURALE V2.1 // MASTER CALIBRATION</b><br><br>
+      > Sensibilità Y: AUMENTATA (Jet Response)<br>
+      > Idle Noise Gate: ATTIVO (Zero Artefatti)<br>
+      > Space Engine: PRONTO (Labbra = Trigger)<br>
       <span style="color:#ff0033">> WARNING: Feedback quantico monitorato.</span>
     </div>
     <button class="btn" id="action-btn">ESTABLISH NEURAL LINK</button>
@@ -66,21 +63,20 @@
 
   <script>
     let video, facemesh, predictions = [];
-    let pitchShift, flanger, spaceDelay, spaceReverb, limiter, meter;
+    let pitchShift, chebyshev, flangerEffect, spaceDelay, spaceReverb, limiter, meter;
     
-    let curPitch = 0, curSpace = 0, curFlanger = 0;
+    let curPitch = 0, curPitchWet = 0;
+    let curSpace = 0, curFlanger = 0;
     let headX = 0, headY = 0;
     let isRunning = false;
 
-    // --- SETUP P5.JS ---
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.position(0, 0);
-      canvas.style('z-index', '-1'); // Mette il canvas sotto la UI
-      canvas.style('pointer-events', 'none'); // Impedisce al canvas di bloccare i click
+      canvas.style('z-index', '-1'); 
+      canvas.style('pointer-events', 'none'); 
     }
 
-    // --- LOGICA DI AVVIO SICURA (Al click del pulsante) ---
     document.getElementById('action-btn').addEventListener('click', async () => {
       document.getElementById('action-btn').style.display = 'none';
       try {
@@ -91,41 +87,33 @@
         await Tone.start();
         const micSource = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        // --- MOTORE AUDIO SPAZIALE CORRETTO E POTENTE ---
+        // --- MOTORE AUDIO CALIBRATO ---
         pitchShift = new Tone.PitchShift(0);
-        pitchShift.windowSize = 0.04;
+        pitchShift.windowSize = 0.05; // Finestra più ampia per voce meno robotica a riposo
+        pitchShift.wet.value = 0; // START DRY (Evita il phasing)
 
-        // VERO JET FLANGER: Chebyshev per armoniche metalliche + Chorus risonante
-        let chebyshev = new Tone.Chebyshev(50);
-        let flangerEffect = new Tone.Chorus({
-          frequency: 15,
-          delayTime: 3.5,
-          depth: 0.9,
-          feedback: 0.95, // IL SEGRETO DEL FISCHIO
-          spread: 180
+        chebyshev = new Tone.Chebyshev(50);
+        chebyshev.wet.value = 0; // START DRY (Evita il fruscio)
+
+        flangerEffect = new Tone.Chorus({
+          frequency: 15, delayTime: 3.5, depth: 0.9, feedback: 0.95, spread: 180
         }).start();
         flangerEffect.wet.value = 0;
-        
-        // Colleghiamo in cascata
-        flanger = chebyshev;
-        flanger.connect(flangerEffect);
-        flanger = flangerEffect; // Sotto, useremo 'flanger.wet'
 
         spaceDelay = new Tone.FeedbackDelay("16n", 0.7);
         spaceDelay.wet.value = 0;
         
-        spaceReverb = new Tone.Freeverb({ roomSize: 0.8, dampening: 1000 });
+        spaceReverb = new Tone.Freeverb({ roomSize: 0.85, dampening: 1500 });
         spaceReverb.wet.value = 0;
 
         limiter = new Tone.Limiter(-1);
         meter = new Tone.Meter();
 
-        // ROUTING NATIVO E SICURO (con Tone.connect per bypassare l'errore di dizionario)
         Tone.connect(micSource, pitchShift);
         Tone.connect(micSource, meter);
-        pitchShift.chain(chebyshev, spaceDelay, spaceReverb, limiter, Tone.Destination);
+        // Catena: Pitch -> Chebyshev -> Flanger -> Delay -> Reverb -> Out
+        pitchShift.chain(chebyshev, flangerEffect, spaceDelay, spaceReverb, limiter, Tone.Destination);
 
-        // --- VIDEO ENGINE ---
         video = createCapture(VIDEO, () => {
           facemesh = ml5.facemesh(video, () => {
             isRunning = true;
@@ -138,7 +126,6 @@
       } catch (e) { alert("Errore inizializzazione: " + e.message); }
     });
 
-    // --- LOOP GRAFICO (HUD & EFFETTI VISIVI) ---
     function draw() {
       background(3, 5, 10);
       if (!isRunning) return;
@@ -146,42 +133,54 @@
       let db = meter.getValue();
       let vol = map(db, -40, 0, 0, 1, true);
 
-      // --- LOGICA MAPPING BIOMETRICA CORRETTA ---
+      // --- LOGICA MAPPING BIOMETRICA (SMART CALIBRATION) ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         let nose = pts[1];
         let topL = pts[13], botL = pts[14];
 
-        // 1. BOCCA (Delay/Riverbero Spaziale)
+        // 1. BOCCA (Sensibilità ottimizzata, Deadzone=10)
         let mDist = dist(topL[0], topL[1], botL[0], botL[1]);
-        curSpace = lerp(curSpace, mDist > 7 ? map(mDist, 7, 30, 0, 1, true) : 0, 0.2);
+        let targetSpace = mDist > 10 ? map(mDist, 10, 35, 0, 1, true) : 0;
+        curSpace = lerp(curSpace, targetSpace, 0.15); // Reattività fluida
         spaceDelay.wet.value = curSpace;
         spaceReverb.wet.value = curSpace;
 
-        // 2. TESTA X (Pitch Shift - Gravità -> Specchiato)
+        // 2. TESTA X (Pitch Shift con Wet/Dry Dinamico)
         headX = (video.width/2) - nose[0]; 
-        let tPitch = Math.abs(headX) > 20 ? map(headX, -150, 150, -24, 24, true) : 0;
-        curPitch = lerp(curPitch, tPitch, 0.1);
+        let tPitch = 0;
+        let tPitchWet = 0;
+        // Deadzone di 25px per evitare tremolii
+        if (Math.abs(headX) > 25) {
+          tPitch = map(headX, -150, 150, -24, 24, true);
+          tPitchWet = map(Math.abs(headX), 25, 60, 0, 1, true); // Accende l'effetto dolcemente
+        }
+        curPitch = lerp(curPitch, tPitch, 0.15);
+        curPitchWet = lerp(curPitchWet, tPitchWet, 0.15);
+        
         pitchShift.pitch = curPitch;
+        pitchShift.wet.value = curPitchWet;
 
-        // 3. TESTA Y (Jet Flanger - Solo SU -> Propulsori)
+        // 3. TESTA Y (Jet Flanger Iper-Sensibile)
         headY = (video.height/2) - nose[1];
-        let tFlange = headY > 25 ? map(headY, 25, 120, 0, 1, true) : 0;
-        curFlanger = lerp(curFlanger, tFlange, 0.2);
-        flanger.wet.value = curFlanger;
+        // Abbassata la deadzone a 15, raggiunge il 100% già a 90px (molto più sensibile)
+        let tFlange = headY > 15 ? map(headY, 15, 90, 0, 1, true) : 0;
+        curFlanger = lerp(curFlanger, tFlange, 0.2); // Reazione rapida (0.2)
+        
+        // Spegne i motori a riposo
+        chebyshev.wet.value = curFlanger;
+        flangerEffect.wet.value = curFlanger;
       }
 
-      // --- RENDER HUD TATTICO COMPLESSO (ispirato alle reference) ---
+      // --- RENDER HUD TATTICO ---
       drawBackgroundGrid();
       
       push();
       translate(width, 0); scale(-1, 1);
       
-      // Allarme Viscerale: Schermo trema violentemente (Larsen WoW!)
       let shake = vol > 0.85 ? random(-25, 25) : 0;
       translate(width/2 - video.width/2 + shake, height/2 - video.height/2 + shake);
       
-      // Aberrazione Cromatica (RGB Split basato sul Pitch)
       let offset = map(Math.abs(curPitch), 0, 24, 0, 40);
       blendMode(SCREEN);
       tint(255, 0, 50, 140); image(video, -offset, 0);
@@ -189,11 +188,9 @@
       tint(255, 255, 255, 180); image(video, 0, 0);
       blendMode(BLEND);
 
-      // Maschera AI Biometrica agganciata al viso
       if (predictions.length > 0) drawFaceOverlay(vol);
       pop();
 
-      // Disegna l'interfaccia HUD complessa sopra il video
       drawTacticalUI(db, vol);
     }
 
@@ -209,11 +206,9 @@
       stroke(0, 255, 255, 100);
       noFill();
       beginShape(LINES);
-      // Disegniamo una griglia vettoriale sparsa sul viso
       for(let i=0; i<pts.length; i+=10) vertex(pts[i][0], pts[i][1]);
       endShape();
       
-      // Mirino Vettoriale agganciato al naso
       let nose = pts[1];
       stroke(255); strokeWeight(1.5);
       ellipse(nose[0], nose[1], 40 + vol*50);
@@ -221,19 +216,17 @@
       line(nose[0], nose[1]-30, nose[0], nose[1]+30);
     }
 
-    // --- DISEGNO HUD TATTICO COMPLESSO E Pieno di Grafica ---
     function drawTacticalUI(db, vol) {
-      // Colore Allarme
       let c = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       stroke(c); fill(c);
       
-      // --- 1. LARSEN VU-METER Dinamico (con Alert "bellissimo") ---
+      // VU-METER
       let rX = width/2 - 200, rY = height - 80;
       fill(10, 20, 40, 220); stroke(c); rect(rX, rY, 400, 25, 3);
       let w = map(db, -40, 0, 0, 400, true);
       noStroke(); fill(c); rect(rX, rY, w, 25, 3);
       
-      // Allarme WoW! Schermo rosso strobo in Larsen
+      // Redout Strobo
       if (vol > 0.85) {
         fill(255, 0, 50, random(50, 150)); rect(0, 0, width, height);
       }
@@ -245,7 +238,7 @@
         fill(c); text("NEURAL LINK TELEMETRY // AUDIO CORE MONITOR", width/2, rY-15);
       }
 
-      // --- 2. DATI RAW E COORDINATE (Reference Style) ---
+      // DATI TATTICI
       textAlign(LEFT); fill(0, 255, 255, 180); textSize(14);
       let xR=width-200, yR=100;
       text(`> GRAVITY_X: ${curPitch.toFixed(1)} ST`, xR, yR);
@@ -253,20 +246,16 @@
       text(`> VOID_Z: ${(curSpace*100).toFixed(0)}%`, xR, yR+40);
       text(`> SYS.TEMP: ${map(db, -40, 0, 100, 950).toFixed(0)} K`, xR, yR+60);
 
-      // Dati a scorrimento in basso a destra
       textAlign(RIGHT); fill(0, 255, 255, 80); textSize(11);
       text(`SEC_TRACTOR_BEAM_STAT: [${db.toFixed(1)}db]\n`+
            `ASTRO_NAV_LINK: [ACTIVE]\n`+
-           `HULL_PLATING_LOAD: [${vol.toFixed(2)}%]\n`+
+           `HULL_PLATING_LOAD: [${(vol*100).toFixed(1)}%]\n`+
            `SYS.ERROR_LOG: [CLEAR]\n`, width-20, height-150);
 
-      // --- 3. ELEMENTI GRAFICI STATICI (Complessità Visiva) ---
       stroke(0, 255, 255, 60); noFill(); strokeWeight(1);
-      // Cornici Tattiche
       drawHUDCorner(20, 20, 60, true);
       drawHUDCorner(width-20, 20, 60, false);
 
-      // Spettrogramma decorativo finto (Bottom Left)
       let spX=30, spY=height-130, spW=200, spH=80;
       rect(spX, spY, spW, spH);
       for(let i=0; i<spW; i+=10) {
@@ -274,12 +263,10 @@
         rect(spX+i, spY+spH, 8, -random(20, spH));
       }
 
-      // Radar circolare finto (Top Left)
       push(); translate(100, 100);
       stroke(0, 255, 255, 80); ellipse(0, 0, 100, 100);
       fill(0, 255, 255, 30); ellipse(0, 0, 50, 50);
       line(-60, 0, 60, 0); line(0, -60, 0, 60);
-      // Puntatore mobile del Radar (X, Y)
       let rx = map(headX, -150, 150, -45, 45, true);
       let ry = map(headY, -150, 150, 45, -45, true);
       fill(0, 255, 255); noStroke(); ellipse(rx, ry, 6, 6);
@@ -289,14 +276,13 @@
     function drawHUDCorner(x, y, size, left) {
       if(left) {
         line(x, y, x+size, y); line(x, y, x, y+size);
-        line(x, y+size+5, x, y+size+size/2); // decorazione
+        line(x, y+size+5, x, y+size+size/2); 
       } else {
         line(x, y, x-size, y); line(x, y, x, y+size);
-        line(x, y+size+5, x, y+size+size/2); // decorazione
+        line(x, y+size+5, x, y+size+size/2); 
       }
     }
 
-    // --- FUNZIONI DI SERVIZIO ---
     window.emergencyMute = () => { Tone.Destination.mute = !Tone.Destination.mute; document.getElementById('panic').innerText = Tone.Destination.mute ? "SBLOCCA MOTORI" : "TAGLIO MOTORI"; };
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
   </script>
