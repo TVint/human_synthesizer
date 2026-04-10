@@ -50,11 +50,11 @@
   <div id="ui-container">
     <h1>VOID RIDER // LINK.START()</h1>
     <div id="status-msg">
-      <b>SISTEMA HUD NEURALE V2.1 // MASTER CALIBRATION</b><br><br>
+      <b>SISTEMA HUD NEURALE V2.2 // GAIN STAGING</b><br><br>
       > Sensibilità Y: AUMENTATA (Jet Response)<br>
-      > Idle Noise Gate: ATTIVO (Zero Artefatti)<br>
+      > Limitatore Larsen: CALIBRATO (-12dB Master)<br>
       > Space Engine: PRONTO (Labbra = Trigger)<br>
-      <span style="color:#ff0033">> WARNING: Feedback quantico monitorato.</span>
+      <span style="color:#ff0033">> WARNING: Feedback quantico sotto controllo.</span>
     </div>
     <button class="btn" id="action-btn">ESTABLISH NEURAL LINK</button>
   </div>
@@ -63,7 +63,7 @@
 
   <script>
     let video, facemesh, predictions = [];
-    let pitchShift, chebyshev, flangerEffect, spaceDelay, spaceReverb, limiter, meter;
+    let pitchShift, chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, meter;
     
     let curPitch = 0, curPitchWet = 0;
     let curSpace = 0, curFlanger = 0;
@@ -87,32 +87,36 @@
         await Tone.start();
         const micSource = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        // --- MOTORE AUDIO CALIBRATO ---
+        // --- MOTORE AUDIO RICALIBRATO ---
         pitchShift = new Tone.PitchShift(0);
-        pitchShift.windowSize = 0.05; // Finestra più ampia per voce meno robotica a riposo
-        pitchShift.wet.value = 0; // START DRY (Evita il phasing)
+        pitchShift.windowSize = 0.05; 
+        pitchShift.wet.value = 0; 
 
         chebyshev = new Tone.Chebyshev(50);
-        chebyshev.wet.value = 0; // START DRY (Evita il fruscio)
+        chebyshev.wet.value = 0; 
 
         flangerEffect = new Tone.Chorus({
-          frequency: 15, delayTime: 3.5, depth: 0.9, feedback: 0.95, spread: 180
+          frequency: 15, delayTime: 3.5, depth: 0.9, 
+          feedback: 0.85, // ABBASSATO per evitare innesco infinito autonomo
+          spread: 180
         }).start();
         flangerEffect.wet.value = 0;
 
-        spaceDelay = new Tone.FeedbackDelay("16n", 0.7);
+        spaceDelay = new Tone.FeedbackDelay("16n", 0.6); // Feedback delay ridotto
         spaceDelay.wet.value = 0;
         
         spaceReverb = new Tone.Freeverb({ roomSize: 0.85, dampening: 1500 });
         spaceReverb.wet.value = 0;
 
+        // IL SEGRETO: Master Volume a -12 decibel taglia l'energia acustica del ritorno
+        masterVol = new Tone.Volume(-12);
         limiter = new Tone.Limiter(-1);
         meter = new Tone.Meter();
 
         Tone.connect(micSource, pitchShift);
         Tone.connect(micSource, meter);
-        // Catena: Pitch -> Chebyshev -> Flanger -> Delay -> Reverb -> Out
-        pitchShift.chain(chebyshev, flangerEffect, spaceDelay, spaceReverb, limiter, Tone.Destination);
+        // Catena: Pitch -> Chebyshev -> Flanger -> Delay -> Reverb -> MASTER VOL -> Limiter
+        pitchShift.chain(chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, Tone.Destination);
 
         video = createCapture(VIDEO, () => {
           facemesh = ml5.facemesh(video, () => {
@@ -130,30 +134,29 @@
       background(3, 5, 10);
       if (!isRunning) return;
 
+      // Ricalibrazione della dinamica del volume (-45 a -5 dB)
       let db = meter.getValue();
-      let vol = map(db, -40, 0, 0, 1, true);
+      let vol = map(db, -45, -5, 0, 1, true);
 
-      // --- LOGICA MAPPING BIOMETRICA (SMART CALIBRATION) ---
+      // --- LOGICA MAPPING BIOMETRICA ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         let nose = pts[1];
         let topL = pts[13], botL = pts[14];
 
-        // 1. BOCCA (Sensibilità ottimizzata, Deadzone=10)
+        // 1. BOCCA (Sensibilità ottimizzata e cap a 85% per sicurezza Larsen)
         let mDist = dist(topL[0], topL[1], botL[0], botL[1]);
-        let targetSpace = mDist > 10 ? map(mDist, 10, 35, 0, 1, true) : 0;
-        curSpace = lerp(curSpace, targetSpace, 0.15); // Reattività fluida
+        let targetSpace = mDist > 12 ? map(mDist, 12, 35, 0, 0.85, true) : 0;
+        curSpace = lerp(curSpace, targetSpace, 0.15); 
         spaceDelay.wet.value = curSpace;
         spaceReverb.wet.value = curSpace;
 
-        // 2. TESTA X (Pitch Shift con Wet/Dry Dinamico)
+        // 2. TESTA X (Pitch Shift)
         headX = (video.width/2) - nose[0]; 
-        let tPitch = 0;
-        let tPitchWet = 0;
-        // Deadzone di 25px per evitare tremolii
+        let tPitch = 0, tPitchWet = 0;
         if (Math.abs(headX) > 25) {
           tPitch = map(headX, -150, 150, -24, 24, true);
-          tPitchWet = map(Math.abs(headX), 25, 60, 0, 1, true); // Accende l'effetto dolcemente
+          tPitchWet = map(Math.abs(headX), 25, 60, 0, 1, true); 
         }
         curPitch = lerp(curPitch, tPitch, 0.15);
         curPitchWet = lerp(curPitchWet, tPitchWet, 0.15);
@@ -161,13 +164,11 @@
         pitchShift.pitch = curPitch;
         pitchShift.wet.value = curPitchWet;
 
-        // 3. TESTA Y (Jet Flanger Iper-Sensibile)
+        // 3. TESTA Y (Jet Flanger rapido)
         headY = (video.height/2) - nose[1];
-        // Abbassata la deadzone a 15, raggiunge il 100% già a 90px (molto più sensibile)
         let tFlange = headY > 15 ? map(headY, 15, 90, 0, 1, true) : 0;
-        curFlanger = lerp(curFlanger, tFlange, 0.2); // Reazione rapida (0.2)
+        curFlanger = lerp(curFlanger, tFlange, 0.2); 
         
-        // Spegne i motori a riposo
         chebyshev.wet.value = curFlanger;
         flangerEffect.wet.value = curFlanger;
       }
@@ -178,7 +179,8 @@
       push();
       translate(width, 0); scale(-1, 1);
       
-      let shake = vol > 0.85 ? random(-25, 25) : 0;
+      // Allarme Viscerale triggerato solo oltre l'85% del volume ricalibrato
+      let shake = vol > 0.85 ? random(-20, 20) : 0;
       translate(width/2 - video.width/2 + shake, height/2 - video.height/2 + shake);
       
       let offset = map(Math.abs(curPitch), 0, 24, 0, 40);
@@ -195,45 +197,44 @@
     }
 
     function drawBackgroundGrid() {
-      stroke(0, 255, 255, 15);
-      strokeWeight(1);
+      stroke(0, 255, 255, 15); strokeWeight(1);
       for(let x=0; x<width; x+=50) line(x, 0, x, height);
       for(let y=0; y<height; y+=50) line(0, y, width, y);
     }
 
     function drawFaceOverlay(vol) {
       let pts = predictions[0].scaledMesh;
-      stroke(0, 255, 255, 100);
-      noFill();
+      stroke(0, 255, 255, 100); noFill();
       beginShape(LINES);
       for(let i=0; i<pts.length; i+=10) vertex(pts[i][0], pts[i][1]);
       endShape();
       
       let nose = pts[1];
       stroke(255); strokeWeight(1.5);
-      ellipse(nose[0], nose[1], 40 + vol*50);
+      ellipse(nose[0], nose[1], 40 + vol*30);
       line(nose[0]-30, nose[1], nose[0]+30, nose[1]);
       line(nose[0], nose[1]-30, nose[0], nose[1]+30);
     }
 
     function drawTacticalUI(db, vol) {
-      let c = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
+      let isAlert = vol > 0.85;
+      let c = isAlert ? color(255, 0, 50) : color(0, 255, 255);
       stroke(c); fill(c);
       
       // VU-METER
       let rX = width/2 - 200, rY = height - 80;
       fill(10, 20, 40, 220); stroke(c); rect(rX, rY, 400, 25, 3);
-      let w = map(db, -40, 0, 0, 400, true);
+      let w = map(vol, 0, 1, 0, 400, true);
       noStroke(); fill(c); rect(rX, rY, w, 25, 3);
       
       // Redout Strobo
-      if (vol > 0.85) {
-        fill(255, 0, 50, random(50, 150)); rect(0, 0, width, height);
+      if (isAlert) {
+        fill(255, 0, 50, random(50, 130)); rect(0, 0, width, height);
       }
 
       textAlign(CENTER); textSize(16);
-      if (vol > 0.85 && frameCount % 6 < 3) {
-        fill(255); text("⚠ LARSEN EFFECT ALERT // INTEGRITY CRITICAL ⚠", width/2, rY-15);
+      if (isAlert && frameCount % 6 < 3) {
+        fill(255); text("⚠ LARSEN EFFECT ALERT // FEEDBACK OVERLOAD ⚠", width/2, rY-15);
       } else {
         fill(c); text("NEURAL LINK TELEMETRY // AUDIO CORE MONITOR", width/2, rY-15);
       }
@@ -244,7 +245,7 @@
       text(`> GRAVITY_X: ${curPitch.toFixed(1)} ST`, xR, yR);
       text(`> JET_PROP: ${(curFlanger*100).toFixed(0)}%`, xR, yR+20);
       text(`> VOID_Z: ${(curSpace*100).toFixed(0)}%`, xR, yR+40);
-      text(`> SYS.TEMP: ${map(db, -40, 0, 100, 950).toFixed(0)} K`, xR, yR+60);
+      text(`> SYS.TEMP: ${map(vol, 0, 1, 100, 950).toFixed(0)} K`, xR, yR+60);
 
       textAlign(RIGHT); fill(0, 255, 255, 80); textSize(11);
       text(`SEC_TRACTOR_BEAM_STAT: [${db.toFixed(1)}db]\n`+
@@ -260,7 +261,7 @@
       rect(spX, spY, spW, spH);
       for(let i=0; i<spW; i+=10) {
         fill(0, 255, 255, random(30, 80)); noStroke();
-        rect(spX+i, spY+spH, 8, -random(20, spH));
+        rect(spX+i, spY+spH, 8, -random(20, spH*vol));
       }
 
       push(); translate(100, 100);
