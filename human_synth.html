@@ -2,236 +2,270 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Human Synth - Bulletproof VJ OS</title>
+  <title>GLITCH // FEEDBACK LOOP</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   
   <style>
-    body { margin: 0; padding: 0; background-color: #050505; color: #0f0; font-family: 'Courier New', monospace; overflow: hidden; }
-    #ui-container { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.9); border: 2px solid #0ff; padding: 40px; text-align: center; z-index: 200; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2); }
-    h1 { margin-top: 0; font-size: 1.8rem; letter-spacing: 3px; color: #0ff; }
-    .btn { display: inline-block; padding: 15px 30px; margin: 10px; font-size: 1.1rem; background: transparent; border: 1px solid #0ff; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; }
-    .btn-pro { color: #00ffff; border-color: #00ffff; }
-    .btn-pro:hover { background: #00ffff; color: #000; }
-    .btn-safe { color: #ffcc00; border-color: #ffcc00; margin-top: 20px;}
-    .btn-safe:hover { background: #ffcc00; color: #000; }
-    #hud { position: absolute; top: 20px; left: 20px; z-index: 100; display: none; background: rgba(0, 0, 0, 0.8); padding: 15px; border-left: 4px solid #0ff; font-size: 0.95rem; }
-    .hud-value { color: #fff; font-weight: bold; }
-    #panic-btn { position: absolute; bottom: 20px; left: 20px; z-index: 300; display: none; background: transparent; color: #ff0055; border: 2px solid #ff0055; padding: 12px 24px; font-size: 1rem; cursor: pointer; font-weight: bold; text-transform: uppercase; }
-    #dev-panel { position: absolute; top: 20px; right: 20px; width: 320px; z-index: 250; display: none; background: rgba(10, 10, 10, 0.95); border: 1px solid #333; padding: 20px; color: #ccc; font-size: 0.85rem; }
-    #dev-panel h3 { color: #fff; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; font-size: 1rem; text-transform: uppercase;}
-    .control-group { margin-bottom: 18px; }
-    label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; }
-    input[type=range] { width: 100%; cursor: pointer; accent-color: #0ff; }
-    .dev-val { color: #0ff; }
+    body { margin: 0; padding: 0; background-color: #000; color: #ff0033; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+    
+    #ui-container {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(10, 0, 0, 0.9); border: 2px solid #ff0033; padding: 40px; text-align: center;
+      z-index: 200; box-shadow: 0 0 40px rgba(255, 0, 51, 0.4);
+    }
+    
+    h1 { margin-top: 0; font-size: 2.5rem; letter-spacing: 5px; color: #ff0033; text-shadow: 2px 2px #00ffff; }
+    
+    .btn {
+      display: inline-block; padding: 20px 40px; margin-top: 20px; font-size: 1.5rem;
+      background: #ff0033; color: #000; border: none; cursor: pointer; 
+      text-transform: uppercase; font-weight: bold; transition: 0.1s;
+    }
+    .btn:hover { background: #fff; color: #ff0033; }
+    .btn:active { transform: scale(0.95); }
+
+    #hud {
+      position: absolute; top: 20px; left: 20px; z-index: 100; display: none;
+      background: rgba(0, 0, 0, 0.8); padding: 20px; border: 1px solid #ff0033;
+    }
+    .hud-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; text-decoration: underline; }
+    .hud-row { margin-bottom: 8px; font-size: 1.1rem; }
+    .hud-val { color: #fff; font-weight: bold; }
+    
+    #panic {
+      position: absolute; bottom: 20px; right: 20px; z-index: 300; display: none;
+      background: #ff0033; color: #fff; border: 2px solid #fff;
+      padding: 15px 30px; font-size: 1.2rem; cursor: pointer; font-weight: bold;
+    }
+    
+    /* Glitch Animation for UI */
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      10% { transform: translate(-1px, -2px) rotate(-1deg); }
+      20% { transform: translate(-3px, 0px) rotate(1deg); }
+      30% { transform: translate(3px, 2px) rotate(0deg); }
+      40% { transform: translate(1px, -1px) rotate(1deg); }
+      50% { transform: translate(-1px, 2px) rotate(-1deg); }
+      60% { transform: translate(-3px, 1px) rotate(0deg); }
+      70% { transform: translate(3px, 1px) rotate(-1deg); }
+      80% { transform: translate(-1px, -1px) rotate(1deg); }
+      90% { transform: translate(1px, 2px) rotate(0deg); }
+      100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+    .glitch-active { animation: shake 0.5s infinite; color: #fff; }
   </style>
 </head>
 <body>
 
   <div id="ui-container">
-    <h1>VJ OS // INIZIALIZZAZIONE</h1>
-    <div style="color:#aaa; max-width: 500px; margin: 0 auto 20px; text-align: left; font-size: 0.9rem;">
-      <p>Scegli la modalità di input audio:</p>
-    </div>
-    
-    <button class="btn btn-pro" onclick="window.bootSystem('TAB')">🌐 CATTURA SCHEDA (PRO)</button><br>
-    <button class="btn btn-safe" onclick="window.bootSystem('MIC')">🎤 USA MICROFONO (SAFE)</button>
+    <h1>SYS.ERROR</h1>
+    <p style="color:#aaa; max-width: 400px; margin: 0 auto; line-height: 1.5;">
+      Questa esperienza utilizza il microfono per generare volontariamente un feedback di errore acustico (Larsen).<br><br>
+      <b>ABBASSA IL VOLUME DELLE CASSE PRIMA DI INIZIARE.</b>
+    </p>
+    <button class="btn" onclick="window.igniteSystem()">IGNITE FEEDBACK</button>
   </div>
 
   <div id="hud">
-    <div>AUDIO IN: <span id="val-db" class="hud-value">-∞ dB</span></div>
-    <hr style="border-color:#333; margin: 10px 0;">
-    <div>PITCH (X): <span id="val-pitch" class="hud-value">0 semi</span></div>
-    <div>DELAY (Bocca): <span id="val-delay" class="hud-value">0%</span></div>
-    <div>FILTER (Y): <span id="val-filter" class="hud-value" style="color: #ffcc00;">BYPASS</span></div>
+    <div class="hud-title">DIAGNOSTICA ERRORE</div>
+    <div class="hud-row">MIC LEVEL: <span id="val-db" class="hud-val">-∞</span> dB</div>
+    <div class="hud-row">FEEDBACK (Bocca): <span id="val-delay" class="hud-val">0</span>%</div>
+    <div class="hud-row">MUTATION (Testa X): <span id="val-pitch" class="hud-val">0</span> semi</div>
+    <div class="hud-row">CRUSH (Testa Y): <span id="val-crush" class="hud-val">0</span>%</div>
+    <div id="warning" style="color: #00ffff; margin-top: 15px; font-weight: bold; display: none;">CRITICAL LOOP DETECTED</div>
   </div>
 
-  <div id="dev-panel">
-    <h3>Dev Panel // Matrix</h3>
-    <div class="control-group"><label><span>Input Gain</span> <span id="lbl-gain" class="dev-val">0 dB</span></label><input type="range" id="ctrl-gain" min="-40" max="20" step="1" value="0" oninput="updateDevVal('lbl-gain', this.value, ' dB'); if(inGain) inGain.volume.rampTo(this.value, 0.1);"></div>
-    <div class="control-group"><label><span>Max Delay Wet</span> <span id="lbl-maxdelay" class="dev-val">80%</span></label><input type="range" id="ctrl-maxdelay" min="10" max="100" step="1" value="80" oninput="updateDevVal('lbl-maxdelay', this.value, '%');"></div>
-    <div class="control-group"><label><span>Asse Y Sensibilità</span> <span id="lbl-ysens" class="dev-val">1.0x</span></label><input type="range" id="ctrl-ysens" min="0.5" max="3" step="0.1" value="1.0" oninput="updateDevVal('lbl-ysens', this.value, 'x');"></div>
-  </div>
-
-  <button id="panic-btn" onclick="window.toggleMute()">🔇 Mute Master</button>
+  <button id="panic" onclick="window.emergencyMute()">EMERGENCY STOP (MUTE)</button>
 
   <script>
     // Variabili Globali
     let video, facemesh, predictions = [];
-    let inGain, pitchShift, feedbackDelay, djLowpass, djHighpass, limiter, meter;
-    let currentPitch = 0, currentDelayWet = 0, currentLpfFreq = 20000, currentHpfFreq = 0;
+    let mic, pitchShift, distortion, feedbackDelay, limiter, meter;
+    
+    // Variabili di stato correnti
+    let curPitch = 0, curDelay = 0, curDist = 0;
     let isMuted = false;
-    let sysState = "IDLE"; 
-    let errorMessage = "";
+    let isRunning = false;
 
     function setup() {
-      let cvn = createCanvas(windowWidth, windowHeight);
-      cvn.position(0, 0);
-      cvn.style('z-index', '-1'); 
+      let canvas = createCanvas(windowWidth, windowHeight);
+      canvas.position(0, 0);
+      canvas.style('z-index', '-1');
     }
 
-    // FIX: Assicuriamo che bootSystem sia visibile a tutto il browser
-    window.bootSystem = async function(mode) {
-      console.log("Avvio richiesto in modalità:", mode);
+    // AVVIO DEL SISTEMA (Chiamata direttamente dal pulsante HTML)
+    window.igniteSystem = async function() {
+      document.getElementById('ui-container').innerHTML = "<h2 style='color:#fff'>INIZIALIZZAZIONE...</h2><p>Accetta il microfono e la webcam.</p>";
       
-      if (typeof Tone === 'undefined' || typeof ml5 === 'undefined') {
-        alert("ERRORE CRITICO: Le librerie Tone.js o ml5.js non sono caricate. Controlla la tua connessione internet o disattiva l'AdBlocker.");
+      try {
+        await Tone.start();
+        
+        // --- 1. SETUP AUDIO DESTRUTTIVO ---
+        mic = new Tone.UserMedia();
+        
+        // Pitch Shift per "stritolare" le frequenze
+        pitchShift = new Tone.PitchShift(0);
+        pitchShift.windowSize = 0.05;
+
+        // Distorsione aggressiva (Crusher)
+        distortion = new Tone.Distortion(0.8);
+        distortion.wet.value = 0; // Inizia pulito
+
+        // Delay infinito per creare il vero Larsen
+        feedbackDelay = new Tone.FeedbackDelay("16n", 0.95);
+        feedbackDelay.wet.value = 0;
+
+        // Limiter fondamentale per non far esplodere le casse fisicamente
+        limiter = new Tone.Limiter(-1);
+        meter = new Tone.Meter();
+
+        // ROUTING: Mic -> Pitch -> Distorsione -> Delay -> Limiter -> Uscita
+        mic.chain(pitchShift, distortion, feedbackDelay, limiter, Tone.Destination);
+        mic.connect(meter);
+
+        await mic.open();
+        
+      } catch (e) {
+        alert("Impossibile accedere al Microfono. Controlla i permessi.");
         return;
       }
 
-      document.getElementById('ui-container').style.display = 'none';
-      let audioStream;
-      sysState = "REQ_AUDIO";
-
-      try {
-        if (mode === 'TAB') {
-          audioStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: { suppressLocalAudioPlayback: true, echoCancellation: false, noiseSuppression: false }
-          });
-        } else {
-          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-        }
-      } catch (err) {
-        sysState = "ERROR";
-        errorMessage = err.message || "Permesso Audio Negato.";
-        return; 
-      }
-
-      await Tone.start();
-
-      try {
-        const audioContext = Tone.getContext().rawContext;
-        const mediaStreamSource = audioContext.createMediaStreamSource(audioStream);
-
-        inGain = new Tone.Volume(0);
-        pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.03 });
-        feedbackDelay = new Tone.FeedbackDelay("8n", 0.6);
-        feedbackDelay.wet.value = 0; 
-        djLowpass = new Tone.Filter(20000, "lowpass");
-        djHighpass = new Tone.Filter(0, "highpass");
-        limiter = new Tone.Limiter(-2); 
-        meter = new Tone.Meter();
-
-        Tone.connect(mediaStreamSource, inGain); 
-        inGain.chain(pitchShift, feedbackDelay, djLowpass, djHighpass, limiter, Tone.Destination);
-        inGain.connect(meter);
-      } catch (err) {
-        sysState = "ERROR"; errorMessage = "Errore nel motore audio Tone.js"; return;
-      }
-
-      sysState = "REQ_WEBCAM";
+      // --- 2. SETUP WEBCAM & AI ---
       video = createCapture(VIDEO, () => {
-        sysState = "LOAD_AI";
+        document.getElementById('ui-container').innerHTML = "<h2 style='color:#00ffff'>CARICAMENTO AI...</h2><p>Attendi qualche secondo.</p>";
+        
         facemesh = ml5.facemesh(video, () => {
-          sysState = "RUNNING"; 
+          // TUTTO PRONTO!
+          isRunning = true;
+          document.getElementById('ui-container').style.display = 'none';
           document.getElementById('hud').style.display = 'block';
-          document.getElementById('dev-panel').style.display = 'block';
-          document.getElementById('panic-btn').style.display = 'block';
+          document.getElementById('panic').style.display = 'block';
         });
+        
         facemesh.on("predict", results => { predictions = results; });
       });
       video.hide();
     };
 
-    window.updateDevVal = function(id, val, suffix) {
-      document.getElementById(id).innerText = val + suffix;
-    };
-
-    window.toggleMute = function() {
+    window.emergencyMute = function() {
       isMuted = !isMuted;
       Tone.Destination.mute = isMuted;
-      const btn = document.getElementById('panic-btn');
-      if (isMuted) { btn.innerText = "🔊 UNMUTE MASTER"; btn.classList.add('muted'); } 
-      else { btn.innerText = "🔇 MUTE MASTER OUTPUT"; btn.classList.remove('muted'); }
+      const btn = document.getElementById('panic');
+      if (isMuted) {
+        btn.innerText = "AUDIO MUTATO (CLICCA PER SBLOCCARE)";
+        btn.style.background = "#fff";
+        btn.style.color = "#ff0033";
+      } else {
+        btn.innerText = "EMERGENCY STOP (MUTE)";
+        btn.style.background = "#ff0033";
+        btn.style.color = "#fff";
+      }
     };
 
+    // --- LOOP GRAFICO (Il Caos) ---
     function draw() {
-      background(5, 5, 10, 80);
-
-      if (sysState !== "RUNNING") {
-        drawDiagnostics();
-        return;
-      }
-
+      // Effetto scia pesante. Se il volume è alto, lo sfondo diventa rosso sangue.
       let db = meter ? meter.getValue() : -100;
-      let visualLevel = map(db, -40, -10, 0, 1, true); 
-      document.getElementById('val-db').innerText = isFinite(db) ? db.toFixed(1) + " dB" : "-∞ dB";
+      let volNorm = map(db, -40, -5, 0, 1, true); // Da 0.0 a 1.0
+      
+      background(volNorm * 50, 0, 0, 50);
+
+      if (!isRunning) return;
+
+      document.getElementById('val-db').innerText = db.toFixed(1);
 
       push();
-      translate(width, 0); scale(-1, 1); 
-      let shakeIntensity = visualLevel * 30;
-      translate(width/2 - video.width/2 + random(-shakeIntensity, shakeIntensity), height/2 - video.height/2 + random(-shakeIntensity, shakeIntensity));
-      tint(255, 60 + (visualLevel * 100));
+      translate(width, 0); 
+      scale(-1, 1); // Specchio
+
+      // EFFETTO TERREMOTO VISIVO basato sul rumore
+      let shake = volNorm * 50; 
+      translate(width/2 - video.width/2 + random(-shake, shake), height/2 - video.height/2 + random(-shake, shake));
+      
+      // La webcam diventa visibile solo quando c'è rumore o movimento
+      tint(255, 30 + (volNorm * 200));
+      
+      // Filtro colore: il video diventa rosso se c'è distorsione
+      if (curDist > 0.5) tint(255, 0, 0, 150);
+      
       image(video, 0, 0);
 
       if (predictions.length > 0) {
-        processBiometrics();
-        drawTechMask(visualLevel);
+        processMocap();
+        drawCyberMask(volNorm);
       }
       pop();
-    }
 
-    function drawDiagnostics() {
-      fill(0, 255, 255); noStroke(); textAlign(CENTER, CENTER);
-      if (sysState === "REQ_AUDIO") {
-        textSize(24); text("ATTESA SORGENTE AUDIO...", width/2, height/2);
-        textSize(16); text("Accetta il popup del browser per continuare.", width/2, height/2 + 30);
-      } else if (sysState === "REQ_WEBCAM") {
-        textSize(24); text("ATTESA WEBCAM...", width/2, height/2);
-        textSize(16); text("Il browser sta accendendo la telecamera.", width/2, height/2 + 30);
-      } else if (sysState === "LOAD_AI") {
-        textSize(24); fill(255, 0, 255); text("CARICAMENTO RETE NEURALE FACEMESH...", width/2, height/2);
-      } else if (sysState === "ERROR") {
-        textSize(24); fill(255, 0, 0); text("ERRORE DI SISTEMA", width/2, height/2 - 20);
-        textSize(16); text(errorMessage, width/2, height/2 + 20);
+      // UI Feedback Visivo
+      if (volNorm > 0.8) {
+        document.getElementById('warning').style.display = 'block';
+        document.getElementById('hud').classList.add('glitch-active');
+      } else {
+        document.getElementById('warning').style.display = 'none';
+        document.getElementById('hud').classList.remove('glitch-active');
       }
     }
 
-    function drawTechMask(visualLevel) {
-      const keypoints = predictions[0].scaledMesh;
-      let r = map(currentDelayWet, 0, 1, 0, 255);
-      let g = map(Math.abs(currentPitch), 0, 12, 255, 0);
-      let b = 255;
-      if (currentHpfFreq > 500) b = 255; else if (currentLpfFreq < 5000) b = 0;
+    // DISEGNO DELLA MASCHERA "BRUTALISTA"
+    function drawCyberMask(volNorm) {
+      const pts = predictions[0].scaledMesh;
+      
+      // La maschera "esplode" se urli o c'è rumore
+      let explode = volNorm * 20;
 
-      stroke(r, g, b, 200); strokeWeight(1.5 + (visualLevel * 3)); noFill();
+      stroke(255, 0, 51, 200); // Rosso acceso
+      strokeWeight(2 + (volNorm * 5));
+      noFill();
+
       beginShape(POINTS);
-      for (let j = 0; j < keypoints.length; j++) { let [x, y] = keypoints[j]; point(x, y); }
+      for (let j = 0; j < pts.length; j++) {
+        let [x, y] = pts[j];
+        // I punti impazziscono col volume
+        point(x + random(-explode, explode), y + random(-explode, explode));
+      }
       endShape();
     }
 
-    function processBiometrics() {
-      const keypoints = predictions[0].scaledMesh;
-      let maxDelayLimit = parseFloat(document.getElementById('ctrl-maxdelay').value) / 100;
-      let ySens = parseFloat(document.getElementById('ctrl-ysens').value);
+    // MOTORE INTERATTIVO
+    function processMocap() {
+      const pts = predictions[0].scaledMesh;
+      
+      // 1. BOCCA = FEEDBACK LOOP
+      // Più apri la bocca, più crei eco e inneschi il fischio (Larsen)
+      const topLip = pts[13], bottomLip = pts[14];
+      let mouthDist = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
+      
+      let targetDelay = mouthDist > 10 ? map(mouthDist, 10, 50, 0, 1, true) : 0;
+      curDelay = lerp(curDelay, targetDelay, 0.1);
+      feedbackDelay.wet.rampTo(curDelay, 0.1);
 
-      const topLip = keypoints[13], bottomLip = keypoints[14];
-      let adjustedMouth = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
-      let targetDelayWet = adjustedMouth > 15 ? map(adjustedMouth, 15, 60, 0, 1, true) : 0;
-      currentDelayWet = Math.min(targetDelayWet, maxDelayLimit);
-      feedbackDelay.wet.rampTo(currentDelayWet, 0.1);
+      // 2. TESTA (Asse X) = MUTAZIONE PITCH
+      // Sposta la testa per trasformare la tua voce o il fischio in demoniaco/alieno
+      const nose = pts[1];
+      let noseX = nose[0] - (video.width / 2);
+      let targetPitch = map(noseX, -150, 150, -12, 12, true) * -1; 
+      
+      curPitch = lerp(curPitch, targetPitch, 0.1);
+      pitchShift.pitch = curPitch;
 
-      const nose = keypoints[1];
-      let noseOffsetX = nose[0] - (video.width / 2);
-      let targetPitch = map(noseOffsetX, -150, 150, -12, 12, true) * -1; 
-      if (Math.abs(noseOffsetX) < 25) { targetPitch = 0; pitchShift.wet.rampTo(0, 0.1); } 
-      else { pitchShift.wet.rampTo(1, 0.1); }
-      currentPitch = lerp(currentPitch, targetPitch, 0.1);
-      pitchShift.pitch = currentPitch;
+      // 3. TESTA (Asse Y) = DISTORSIONE / BITCRUSH
+      // Alza o abbassa la testa per "schiacciare" il suono
+      let noseY = nose[1] - (video.height / 2);
+      let targetDist = map(Math.abs(noseY), 20, 150, 0, 1, true); // Si attiva se vai molto su o molto giù
+      
+      curDist = lerp(curDist, targetDist, 0.1);
+      distortion.wet.rampTo(curDist, 0.1);
 
-      let noseOffsetY = (nose[1] - (video.height / 2)) * ySens;
-      let targetLpf = 20000, targetHpf = 0, filterStatus = "BYPASS", filterColor = "#ffcc00";
-      if (noseOffsetY < -30) {
-        targetHpf = map(noseOffsetY, -30, -150, 0, 6000, true); filterStatus = "HIGH-PASS"; filterColor = "#00ffff";
-      } else if (noseOffsetY > 30) {
-        targetLpf = map(noseOffsetY, 30, 150, 20000, 200, true); filterStatus = "LOW-PASS"; filterColor = "#ff0055";
-      }
-      currentLpfFreq = lerp(currentLpfFreq, targetLpf, 0.1);
-      currentHpfFreq = lerp(currentHpfFreq, targetHpf, 0.1);
-      djLowpass.frequency.rampTo(currentLpfFreq, 0.1);
-      djHighpass.frequency.rampTo(currentHpfFreq, 0.1);
+      // Aggiorna Schermo
+      document.getElementById('val-delay').innerText = (curDelay * 100).toFixed(0);
+      document.getElementById('val-pitch').innerText = curPitch.toFixed(1);
+      document.getElementById('val-crush').innerText = (curDist * 100).toFixed(0);
+    }
 
-      document.getElementById('val-pitch').innerText = currentPitch.toFixed(1) + " semi
+    function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+  </script>
+</body>
+</html>
