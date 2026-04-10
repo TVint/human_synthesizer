@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>GLITCH // FEEDBACK LOOP v2</title>
+  <title>GLITCH // FEEDBACK LOOP v2.1</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -10,30 +10,25 @@
   
   <style>
     body { margin: 0; padding: 0; background-color: #000; color: #ff0033; font-family: 'Courier New', monospace; overflow: hidden; }
-    
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(10, 0, 0, 0.95); border: 2px solid #ff0033; padding: 40px; text-align: center;
       z-index: 200; box-shadow: 0 0 50px rgba(255, 0, 51, 0.6); width: 450px;
     }
-    
     h1 { margin-top: 0; font-size: 2rem; letter-spacing: 5px; color: #ff0033; }
     #status-msg { margin: 20px 0; color: #00ffff; font-size: 0.9rem; min-height: 40px; }
-    
     .btn {
       display: inline-block; padding: 15px 30px; margin-top: 10px; font-size: 1.2rem;
       background: #ff0033; color: #000; border: none; cursor: pointer; 
       text-transform: uppercase; font-weight: bold;
     }
     .btn:hover { background: #fff; }
-
     #hud {
       position: absolute; top: 20px; left: 20px; z-index: 100; display: none;
       background: rgba(0, 0, 0, 0.85); padding: 20px; border-left: 5px solid #ff0033;
     }
     .hud-row { margin-bottom: 5px; font-size: 1rem; }
     .hud-val { color: #fff; }
-    
     #panic {
       position: absolute; bottom: 20px; right: 20px; z-index: 300; display: none;
       background: #ff0033; color: #fff; border: 1px solid #fff; padding: 10px 20px; cursor: pointer;
@@ -51,20 +46,19 @@
   <div id="hud">
     <div class="hud-row">MIC LEVEL: <span id="val-db" class="hud-val">-∞</span> dB</div>
     <div class="hud-row">PITCH (X): <span id="val-pitch" class="hud-val">0</span> semi</div>
-    <div class="hud-row">CHORUS (Y): <span id="val-chorus" class="hud-val">0</span>%</div>
-    <div class="hud-row">DELAY (Z): <span id="val-delay" class="hud-val">0</span>%</div>
-    <div style="color:#0ff; font-size: 0.7rem; margin-top:10px;">VOLUME SET: 50% (SAFETY MODE)</div>
+    <div class="hud-row">FLANGER (Y): <span id="val-flanger" class="hud-val">0</span>%</div>
+    <div class="hud-row">DELAY (Bocca): <span id="val-delay" class="hud-val">0</span>%</div>
+    <div style="color:#0ff; font-size: 0.7rem; margin-top:10px;">VOLUME MASTER: 50% (LIMITATO)</div>
   </div>
 
   <button id="panic" onclick="window.emergencyMute()">STOP AUDIO</button>
 
   <script>
     let video, facemesh, predictions = [];
-    let mic, pitchShift, flanger, feedbackDelay, limiter, meter;
-    let curPitch = 0, curDelay = 0, curChorus = 0;
+    let mic, pitchShift, flanger, feedbackDelay, limiter, meter, masterVol;
+    let curPitch = 0, curDelay = 0, curFlanger = 0;
     let isRunning = false, step = 0;
 
-    // --- SEQUENZA DI ACCESSO PERSONALIZZATA ---
     window.nextStep = async function() {
       const msg = document.getElementById('status-msg');
       const btn = document.getElementById('action-btn');
@@ -72,45 +66,48 @@
 
       if (step === 0) {
         title.innerText = "AUDIO.CHECK";
-        msg.innerHTML = "ATTENZIONE: Il volume del sistema verrà limitato al 50% per la tua sicurezza acustica.<br>Acconsenti all'uso del microfono.";
+        msg.innerHTML = "ATTENZIONE: Il volume dell'app verrà settato al 50% per sicurezza.<br>Acconsenti all'uso del microfono.";
         btn.innerText = "ATTIVA MICROFONO";
         step++;
       } 
       else if (step === 1) {
         try {
           await Tone.start();
-          mic = new Tone.UserMedia();
           
-          // Setup Catena Audio con Effetti Richiesti
+          // --- INIZIALIZZAZIONE NODI (Ordine Corretto) ---
+          mic = new Tone.UserMedia();
           pitchShift = new Tone.PitchShift(0);
-          pitchShift.windowSize = 0.03; // Più reattivo
-
-          // Parametri: (delayTime, depth, feedback)
-          flanger = new Tone.Flanger({
-            delayTime: 0.5, 
-            depth: 1, 
-            feedback: 0.8 
-          }).connect(feedbackDelay); // Collega alla catena
-          flanger.wet.value = 0;
+          pitchShift.windowSize = 0.03;
 
           feedbackDelay = new Tone.FeedbackDelay("16n", 0.8);
           feedbackDelay.wet.value = 0;
 
-          // Limiter impostato per simulare un volume al 50% (circa -6dB di output)
-          limiter = new Tone.Limiter(-6); 
+          // Flanger estremo come richiesto
+          flanger = new Tone.Flanger({
+            delayTime: 0.5, 
+            depth: 1, 
+            feedback: 0.8 
+          });
+          flanger.wet.value = 0;
+
+          // Master Volume al 50% (-6 decibel)
+          masterVol = new Tone.Volume(-6);
+          limiter = new Tone.Limiter(-2); 
           meter = new Tone.Meter();
 
-          mic.chain(pitchShift, flanger, feedbackDelay, limiter, Tone.Destination);
+          // Catena: Mic -> Pitch -> Flanger -> Delay -> Volume -> Limiter -> Out
+          mic.chain(pitchShift, flanger, feedbackDelay, masterVol, limiter, Tone.Destination);
           mic.connect(meter);
 
           await mic.open();
           
           title.innerText = "VISION.CHECK";
-          msg.innerHTML = "Microfono calibrato al 50%.<br>Ora è necessaria la scansione biometrica della videocamera.";
+          msg.innerHTML = "Audio configurato.<br>Ora attiva la videocamera per il controllo biometrico.";
           btn.innerText = "ATTIVA VIDEOCAMERA";
           step++;
         } catch (e) {
-          msg.innerHTML = "<span style='color:red'>ERRORE: Accesso negato al microfono.</span>";
+          console.error(e);
+          msg.innerHTML = "<span style='color:red'>ERRORE: Accesso negato o errore hardware.</span>";
         }
       } 
       else if (step === 2) {
@@ -144,7 +141,6 @@
     function draw() {
       let db = meter ? meter.getValue() : -100;
       let volNorm = map(db, -50, -5, 0, 1, true);
-      
       background(volNorm * 30, 0, 10, 80);
 
       if (!isRunning) return;
@@ -153,11 +149,8 @@
 
       push();
       translate(width, 0); scale(-1, 1);
-      
-      // Terremoto basato sui bassi/volume
       let shake = volNorm * 40;
       translate(width/2 - video.width/2 + random(-shake, shake), height/2 - video.height/2 + random(-shake, shake));
-      
       tint(255, 50 + (volNorm * 200));
       image(video, 0, 0);
 
@@ -172,29 +165,28 @@
       const pts = predictions[0].scaledMesh;
       const nose = pts[1];
 
-      // 1. ASSE X -> PITCH SHIFT (Aumentato l'effetto come richiesto)
-      // Mappatura estrema: +/- 24 semitoni (2 ottave)
+      // 1. ASSE X -> PITCH (Eseguito a +/- 2 ottave)
       let noseX = nose[0] - (video.width / 2);
       let targetPitch = map(noseX, -150, 150, -24, 24, true) * -1;
       curPitch = lerp(curPitch, targetPitch, 0.1);
       pitchShift.pitch = curPitch;
 
-      // 2. ASSE Y -> FLANGER (Su e Giù)
+      // 2. ASSE Y -> FLANGER
       let noseY = nose[1] - (video.height / 2);
       let targetFlanger = map(Math.abs(noseY), 20, 150, 0, 1, true);
-      curChorus = lerp(curChorus, targetFlanger, 0.1); // usiamo curChorus come variabile di appoggio
-      flanger.wet.value = curChorus;
+      curFlanger = lerp(curFlanger, targetFlanger, 0.1);
+      flanger.wet.value = curFlanger;
 
-      // 3. BOCCA -> DELAY (Il feedback loop)
+      // 3. BOCCA -> DELAY
       const topLip = pts[13], bottomLip = pts[14];
       let mouthDist = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       let targetDelay = mouthDist > 12 ? map(mouthDist, 12, 60, 0, 0.9, true) : 0;
       curDelay = lerp(curDelay, targetDelay, 0.1);
       feedbackDelay.wet.rampTo(curDelay, 0.1);
 
-      // Aggiorna HUD
+      // Update HUD
       document.getElementById('val-pitch').innerText = curPitch.toFixed(1);
-      document.getElementById('val-chorus').innerText = (curChorus * 100).toFixed(0);
+      document.getElementById('val-flanger').innerText = (curFlanger * 100).toFixed(0);
       document.getElementById('val-delay').innerText = (curDelay * 100).toFixed(0);
     }
 
