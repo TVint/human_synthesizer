@@ -2,120 +2,146 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>GLITCH // FEEDBACK LOOP v2.1</title>
+  <title>GLITCH // FEEDBACK LOOP PRO</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   
   <style>
-    body { margin: 0; padding: 0; background-color: #000; color: #ff0033; font-family: 'Courier New', monospace; overflow: hidden; }
+    body { margin: 0; padding: 0; background-color: #000; color: #ff0033; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+    
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(10, 0, 0, 0.95); border: 2px solid #ff0033; padding: 40px; text-align: center;
       z-index: 200; box-shadow: 0 0 50px rgba(255, 0, 51, 0.6); width: 450px;
     }
-    h1 { margin-top: 0; font-size: 2rem; letter-spacing: 5px; color: #ff0033; }
-    #status-msg { margin: 20px 0; color: #00ffff; font-size: 0.9rem; min-height: 40px; }
+    
+    h1 { margin-top: 0; font-size: 2.5rem; letter-spacing: 5px; color: #ff0033; text-shadow: 2px 2px #00ffff; }
+    
+    #status-msg { margin: 20px 0; color: #aaa; font-size: 1rem; line-height: 1.5; min-height: 40px; }
+    
     .btn {
-      display: inline-block; padding: 15px 30px; margin-top: 10px; font-size: 1.2rem;
+      display: inline-block; padding: 20px 40px; margin-top: 10px; font-size: 1.5rem;
       background: #ff0033; color: #000; border: none; cursor: pointer; 
-      text-transform: uppercase; font-weight: bold;
+      text-transform: uppercase; font-weight: bold; transition: 0.1s;
     }
-    .btn:hover { background: #fff; }
+    .btn:hover { background: #fff; color: #ff0033; }
+    .btn:active { transform: scale(0.95); }
+
     #hud {
       position: absolute; top: 20px; left: 20px; z-index: 100; display: none;
       background: rgba(0, 0, 0, 0.85); padding: 20px; border-left: 5px solid #ff0033;
     }
-    .hud-row { margin-bottom: 5px; font-size: 1rem; }
-    .hud-val { color: #fff; }
+    .hud-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; text-decoration: underline; }
+    .hud-row { margin-bottom: 8px; font-size: 1.1rem; }
+    .hud-val { color: #fff; font-weight: bold; }
+    
     #panic {
       position: absolute; bottom: 20px; right: 20px; z-index: 300; display: none;
-      background: #ff0033; color: #fff; border: 1px solid #fff; padding: 10px 20px; cursor: pointer;
+      background: #ff0033; color: #fff; border: 2px solid #fff;
+      padding: 15px 30px; font-size: 1.2rem; cursor: pointer; font-weight: bold;
     }
+    
+    @keyframes shake {
+      0% { transform: translate(1px, 1px) rotate(0deg); }
+      10% { transform: translate(-1px, -2px) rotate(-1deg); }
+      20% { transform: translate(-3px, 0px) rotate(1deg); }
+      30% { transform: translate(3px, 2px) rotate(0deg); }
+      40% { transform: translate(1px, -1px) rotate(1deg); }
+      50% { transform: translate(-1px, 2px) rotate(-1deg); }
+      60% { transform: translate(-3px, 1px) rotate(0deg); }
+      70% { transform: translate(3px, 1px) rotate(-1deg); }
+      80% { transform: translate(-1px, -1px) rotate(1deg); }
+      90% { transform: translate(1px, 2px) rotate(0deg); }
+      100% { transform: translate(1px, -2px) rotate(-1deg); }
+    }
+    .glitch-active { animation: shake 0.5s infinite; color: #fff; }
   </style>
 </head>
 <body>
 
   <div id="ui-container">
-    <h1 id="title">SYS.INIT</h1>
-    <div id="status-msg">Benvenuto nel Portale. <br> Clicca per iniziare la sequenza di accesso.</div>
-    <button class="btn" id="action-btn" onclick="window.nextStep()">INIZIA SEQUENZA</button>
+    <h1>SYS.ERROR</h1>
+    <div id="status-msg">
+      <b>ATTENZIONE:</b> Il volume verrà settato al 50% in modalità sicurezza.<br><br>
+      Cliccando il pulsante sottostante autorizzi l'attivazione dei sensori (A/V).
+    </div>
+    <button class="btn" id="action-btn" onclick="window.igniteSystem()">IGNITE SYSTEM</button>
   </div>
 
   <div id="hud">
+    <div class="hud-title">DIAGNOSTICA ERRORE</div>
     <div class="hud-row">MIC LEVEL: <span id="val-db" class="hud-val">-∞</span> dB</div>
-    <div class="hud-row">PITCH (X): <span id="val-pitch" class="hud-val">0</span> semi</div>
-    <div class="hud-row">FLANGER (Y): <span id="val-flanger" class="hud-val">0</span>%</div>
-    <div class="hud-row">DELAY (Bocca): <span id="val-delay" class="hud-val">0</span>%</div>
-    <div style="color:#0ff; font-size: 0.7rem; margin-top:10px;">VOLUME MASTER: 50% (LIMITATO)</div>
+    <div class="hud-row">FEEDBACK (Bocca): <span id="val-delay" class="hud-val">0</span>%</div>
+    <div class="hud-row">MUTATION (Testa X): <span id="val-pitch" class="hud-val">0</span> semi</div>
+    <div class="hud-row">FLANGER (Testa Y): <span id="val-flanger" class="hud-val">0</span>%</div>
+    <div id="warning" style="color: #00ffff; margin-top: 15px; font-weight: bold; display: none;">CRITICAL LOOP DETECTED</div>
   </div>
 
-  <button id="panic" onclick="window.emergencyMute()">STOP AUDIO</button>
+  <button id="panic" onclick="window.emergencyMute()">EMERGENCY STOP (MUTE)</button>
 
   <script>
     let video, facemesh, predictions = [];
     let mic, pitchShift, flanger, feedbackDelay, limiter, meter, masterVol;
+    
     let curPitch = 0, curDelay = 0, curFlanger = 0;
-    let isRunning = false, step = 0;
+    let isMuted = false;
+    let isRunning = false;
 
-    window.nextStep = async function() {
+    function setup() {
+      let canvas = createCanvas(windowWidth, windowHeight);
+      canvas.position(0, 0);
+      canvas.style('z-index', '-1');
+    }
+
+    // --- AVVIO SINGOLO (Tutto in un click) ---
+    window.igniteSystem = async function() {
       const msg = document.getElementById('status-msg');
       const btn = document.getElementById('action-btn');
-      const title = document.getElementById('title');
-
-      if (step === 0) {
-        title.innerText = "AUDIO.CHECK";
-        msg.innerHTML = "ATTENZIONE: Il volume dell'app verrà settato al 50% per sicurezza.<br>Acconsenti all'uso del microfono.";
-        btn.innerText = "ATTIVA MICROFONO";
-        step++;
-      } 
-      else if (step === 1) {
-        try {
-          await Tone.start();
-          
-          // --- INIZIALIZZAZIONE NODI (Ordine Corretto) ---
-          mic = new Tone.UserMedia();
-          pitchShift = new Tone.PitchShift(0);
-          pitchShift.windowSize = 0.03;
-
-          feedbackDelay = new Tone.FeedbackDelay("16n", 0.8);
-          feedbackDelay.wet.value = 0;
-
-          // Flanger estremo come richiesto
-          flanger = new Tone.Flanger({
-            delayTime: 0.5, 
-            depth: 1, 
-            feedback: 0.8 
-          });
-          flanger.wet.value = 0;
-
-          // Master Volume al 50% (-6 decibel)
-          masterVol = new Tone.Volume(-6);
-          limiter = new Tone.Limiter(-2); 
-          meter = new Tone.Meter();
-
-          // Catena: Mic -> Pitch -> Flanger -> Delay -> Volume -> Limiter -> Out
-          mic.chain(pitchShift, flanger, feedbackDelay, masterVol, limiter, Tone.Destination);
-          mic.connect(meter);
-
-          await mic.open();
-          
-          title.innerText = "VISION.CHECK";
-          msg.innerHTML = "Audio configurato.<br>Ora attiva la videocamera per il controllo biometrico.";
-          btn.innerText = "ATTIVA VIDEOCAMERA";
-          step++;
-        } catch (e) {
-          console.error(e);
-          msg.innerHTML = "<span style='color:red'>ERRORE: Accesso negato o errore hardware.</span>";
-        }
-      } 
-      else if (step === 2) {
-        btn.style.display = 'none';
-        msg.innerHTML = "Sincronizzazione FaceMesh in corso...";
+      
+      btn.style.display = 'none';
+      msg.innerHTML = "<span style='color:#00ffff; font-weight:bold;'>ATTESA AUTORIZZAZIONE...</span><br>Controlla il popup del browser in alto a sinistra.";
+      
+      try {
+        // 1. Chiediamo permessi Mic e Camera contemporaneamente (Un solo popup per l'utente)
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
         
+        msg.innerHTML = "<span style='color:#fff;'>Inizializzazione Nodi Audio...</span>";
+        await Tone.start();
+        
+        // 2. SETUP AUDIO
+        mic = new Tone.UserMedia();
+        
+        pitchShift = new Tone.PitchShift(0);
+        pitchShift.windowSize = 0.05;
+
+        // Flanger Estremo per l'asse Y
+        flanger = new Tone.Flanger({ delayTime: 0.5, depth: 1, feedback: 0.8 });
+        flanger.wet.value = 0;
+
+        feedbackDelay = new Tone.FeedbackDelay("16n", 0.95);
+        feedbackDelay.wet.value = 0;
+
+        // Master Volume bloccato a -6dB (50% circa di percezione) per sicurezza
+        masterVol = new Tone.Volume(-6);
+        limiter = new Tone.Limiter(-1);
+        meter = new Tone.Meter();
+
+        // Connessione diretta dello stream autorizzato
+        mic.setStream(stream);
+        
+        // Routing: Mic -> Pitch -> Flanger -> Delay -> Vol -> Limiter -> Casse
+        mic.chain(pitchShift, flanger, feedbackDelay, masterVol, limiter, Tone.Destination);
+        mic.connect(meter);
+
+        msg.innerHTML = "<span style='color:#ff0033;'>Caricamento Rete Neurale (AI)...</span>";
+
+        // 3. SETUP VIDEO & AI
+        // Usiamo la traccia video che abbiamo già autorizzato
         video = createCapture(VIDEO, () => {
           facemesh = ml5.facemesh(video, () => {
+            // SISTEMA PRONTO!
             isRunning = true;
             document.getElementById('ui-container').style.display = 'none';
             document.getElementById('hud').style.display = 'block';
@@ -124,82 +150,126 @@
           facemesh.on("predict", results => { predictions = results; });
         });
         video.hide();
+
+      } catch (e) {
+        msg.innerHTML = "<span style='color:red; font-weight:bold;'>ERRORE SISTEMA:</span> " + e.name + "<br>Accesso a Fotocamera o Microfono negato.";
+        btn.style.display = 'inline-block';
+        btn.innerText = "RIPROVA";
       }
     };
 
     window.emergencyMute = function() {
-      Tone.Destination.mute = !Tone.Destination.mute;
-      document.getElementById('panic').innerText = Tone.Destination.mute ? "ATTIVA AUDIO" : "STOP AUDIO";
+      isMuted = !isMuted;
+      Tone.Destination.mute = isMuted;
+      const btn = document.getElementById('panic');
+      if (isMuted) {
+        btn.innerText = "AUDIO MUTATO (CLICCA PER SBLOCCARE)";
+        btn.style.background = "#fff";
+        btn.style.color = "#ff0033";
+      } else {
+        btn.innerText = "EMERGENCY STOP (MUTE)";
+        btn.style.background = "#ff0033";
+        btn.style.color = "#fff";
+      }
     };
-
-    function setup() {
-      let canvas = createCanvas(windowWidth, windowHeight);
-      canvas.position(0, 0);
-      canvas.style('z-index', '-1');
-    }
 
     function draw() {
       let db = meter ? meter.getValue() : -100;
-      let volNorm = map(db, -50, -5, 0, 1, true);
-      background(volNorm * 30, 0, 10, 80);
+      let volNorm = map(db, -40, -5, 0, 1, true); 
+      
+      background(volNorm * 50, 0, 0, 50);
 
       if (!isRunning) return;
 
-      document.getElementById('val-db').innerText = isFinite(db) ? db.toFixed(1) : "-∞";
+      document.getElementById('val-db').innerText = db.toFixed(1);
 
       push();
-      translate(width, 0); scale(-1, 1);
-      let shake = volNorm * 40;
+      translate(width, 0); 
+      scale(-1, 1);
+
+      let shake = volNorm * 50; 
       translate(width/2 - video.width/2 + random(-shake, shake), height/2 - video.height/2 + random(-shake, shake));
-      tint(255, 50 + (volNorm * 200));
+      
+      tint(255, 30 + (volNorm * 200));
+      
+      // Il Flanger fa virare il video sul blu/viola, il Pitch sul rosso acceso
+      if (curFlanger > 0.5) {
+         tint(100, 100, 255, 150);
+      } else if (Math.abs(curPitch) > 5) {
+         tint(255, 0, 0, 150);
+      }
+      
       image(video, 0, 0);
 
       if (predictions.length > 0) {
-        handleInteraction();
-        renderMask(volNorm);
+        processMocap();
+        drawCyberMask(volNorm);
       }
       pop();
+
+      if (volNorm > 0.8) {
+        document.getElementById('warning').style.display = 'block';
+        document.getElementById('hud').classList.add('glitch-active');
+      } else {
+        document.getElementById('warning').style.display = 'none';
+        document.getElementById('hud').classList.remove('glitch-active');
+      }
     }
 
-    function handleInteraction() {
+    function drawCyberMask(volNorm) {
+      const pts = predictions[0].scaledMesh;
+      let explode = volNorm * 20;
+
+      // Colore maschera cambia in base agli effetti
+      let r = 255;
+      let g = map(curFlanger, 0, 1, 0, 255);
+      let b = map(Math.abs(curPitch), 0, 24, 0, 255);
+
+      stroke(r, g, b, 200);
+      strokeWeight(2 + (volNorm * 5));
+      noFill();
+
+      beginShape(POINTS);
+      for (let j = 0; j < pts.length; j++) {
+        let [x, y] = pts[j];
+        point(x + random(-explode, explode), y + random(-explode, explode));
+      }
+      endShape();
+    }
+
+    function processMocap() {
       const pts = predictions[0].scaledMesh;
       const nose = pts[1];
 
-      // 1. ASSE X -> PITCH (Eseguito a +/- 2 ottave)
-      let noseX = nose[0] - (video.width / 2);
-      let targetPitch = map(noseX, -150, 150, -24, 24, true) * -1;
-      curPitch = lerp(curPitch, targetPitch, 0.1);
-      pitchShift.pitch = curPitch;
-
-      // 2. ASSE Y -> FLANGER
-      let noseY = nose[1] - (video.height / 2);
-      let targetFlanger = map(Math.abs(noseY), 20, 150, 0, 1, true);
-      curFlanger = lerp(curFlanger, targetFlanger, 0.1);
-      flanger.wet.value = curFlanger;
-
-      // 3. BOCCA -> DELAY
+      // 1. BOCCA (Delay / Feedback Loop)
       const topLip = pts[13], bottomLip = pts[14];
       let mouthDist = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
-      let targetDelay = mouthDist > 12 ? map(mouthDist, 12, 60, 0, 0.9, true) : 0;
+      let targetDelay = mouthDist > 10 ? map(mouthDist, 10, 50, 0, 1, true) : 0;
       curDelay = lerp(curDelay, targetDelay, 0.1);
       feedbackDelay.wet.rampTo(curDelay, 0.1);
 
-      // Update HUD
+      // 2. TESTA ASSE X (Pitch Mutation Estremo +/- 24 semitoni con Deadzone)
+      let noseX = nose[0] - (video.width / 2);
+      let targetPitch = 0;
+      if (Math.abs(noseX) > 30) {
+        targetPitch = map(noseX, -150, 150, -24, 24, true) * -1;
+      }
+      curPitch = lerp(curPitch, targetPitch, 0.1);
+      pitchShift.pitch = curPitch;
+
+      // 3. TESTA ASSE Y (Flanger con Deadzone)
+      let noseY = nose[1] - (video.height / 2);
+      let targetFlanger = 0;
+      if (Math.abs(noseY) > 30) {
+        targetFlanger = map(Math.abs(noseY), 30, 150, 0, 1, true); 
+      }
+      curFlanger = lerp(curFlanger, targetFlanger, 0.1);
+      flanger.wet.rampTo(curFlanger, 0.1);
+
+      // Aggiorna HUD
+      document.getElementById('val-delay').innerText = (curDelay * 100).toFixed(0);
       document.getElementById('val-pitch').innerText = curPitch.toFixed(1);
       document.getElementById('val-flanger').innerText = (curFlanger * 100).toFixed(0);
-      document.getElementById('val-delay').innerText = (curDelay * 100).toFixed(0);
-    }
-
-    function renderMask(volNorm) {
-      const pts = predictions[0].scaledMesh;
-      stroke(255, 0, 51, 150);
-      strokeWeight(1 + volNorm * 4);
-      noFill();
-      beginShape(POINTS);
-      for (let i = 0; i < pts.length; i++) {
-        point(pts[i][0], pts[i][1]);
-      }
-      endShape();
     }
 
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
