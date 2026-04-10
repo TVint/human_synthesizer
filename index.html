@@ -86,7 +86,6 @@
     let curPitch = 0, curSpace = 0, curFlanger = 0;
     let isMuted = false, isRunning = false;
 
-    // --- SETUP P5.JS ---
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.position(0, 0);
@@ -130,9 +129,9 @@
         limiter = new Tone.Limiter(-2); 
         meter = new Tone.Meter(); 
 
-        // ROUTING NATIVO E SICURO
-        micSource.connect(pitchShift.input);
-        micSource.connect(meter.input);
+        // ROUTING NATIVO E SICURO (Fix dell'errore di Dizionario)
+        Tone.connect(micSource, pitchShift);
+        Tone.connect(micSource, meter);
         
         pitchShift.chain(flanger, spaceDelay, spaceReverb, limiter, Tone.Destination);
 
@@ -163,7 +162,6 @@
       document.getElementById('panic').innerText = isMuted ? "SBLOCCA MOTORI" : "TAGLIO MOTORI";
     }
 
-    // --- MOTORE GRAFICO (HUD & EFFETTI VISIVI) ---
     function draw() {
       background(5);
       if (!isRunning) return;
@@ -207,7 +205,6 @@
         rect(0, 0, width, height);
         fill(255);
         textAlign(CENTER, CENTER);
-        // FIX ERRORE DI SINTASSI: uso numeri interi per textSize invece di stringhe CSS
         textSize(64); 
         text("⚠ HULL INTEGRITY CRITICAL ⚠", width/2 + random(-5,5), height/2 + random(-5,5));
       }
@@ -235,7 +232,6 @@
       rect(x, y, fillWidth, rectHeight);
 
       textAlign(CENTER, BOTTOM);
-      // FIX ERRORE DI SINTASSI: uso numeri interi per textSize
       textSize(16); 
       if (isCritical && frameCount % 4 < 2) {
         fill(255, 0, 50);
