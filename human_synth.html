@@ -2,77 +2,63 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Human Synth - Live Digital VJ</title>
+  <title>Human Synth - VJ OS</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   
   <style>
-    /* === STILI GLOBALI === */
-    body { margin: 0; padding: 0; background-color: #000; color: #0f0; font-family: 'Courier New', monospace; overflow: hidden; }
+    body { margin: 0; padding: 0; background-color: #050505; color: #0f0; font-family: 'Courier New', monospace; overflow: hidden; }
     
-    /* === MENU INIZIALE (ONBOARDING) === */
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 0, 0, 0.9); border: 2px solid #0ff; padding: 40px; text-align: center;
       z-index: 200; box-shadow: 0 0 30px rgba(0, 255, 255, 0.2);
     }
     h1 { margin-top: 0; font-size: 1.8rem; letter-spacing: 3px; color: #0ff; }
+    
     .btn {
-      display: inline-block; padding: 15px 30px; margin: 10px; font-size: 1.2rem;
-      background: transparent; color: #0ff; border: 1px solid #0ff; cursor: pointer; 
+      display: inline-block; padding: 15px 30px; margin: 10px; font-size: 1.1rem;
+      background: transparent; border: 1px solid #0ff; cursor: pointer; 
       text-transform: uppercase; font-weight: bold; transition: 0.2s;
     }
-    .btn:hover { background: #0ff; color: #000; }
-
-    /* === HUD UTENTE (DATI LIVE) === */
-    #hud {
-      position: absolute; top: 20px; left: 20px; z-index: 100; display: none;
-      background: rgba(0, 0, 0, 0.8); padding: 15px; border-left: 4px solid #0ff; font-size: 0.95rem;
-    }
-    .hud-value { color: #fff; font-weight: bold; }
+    .btn-pro { color: #00ffff; border-color: #00ffff; }
+    .btn-pro:hover { background: #00ffff; color: #000; }
     
-    /* === KILL SWITCH (PANIC BUTTON) === */
-    #panic-btn {
-      position: absolute; bottom: 20px; left: 20px; z-index: 300; display: none;
-      background: transparent; color: #ff0055; border: 2px solid #ff0055;
-      padding: 12px 24px; font-size: 1rem; cursor: pointer; font-weight: bold; text-transform: uppercase;
-    }
-    #panic-btn.muted { background: #ff0055; color: #fff; }
+    .btn-safe { color: #ffcc00; border-color: #ffcc00; margin-top: 20px;}
+    .btn-safe:hover { background: #ffcc00; color: #000; }
 
-    /* === PANNELLO SVILUPPATORE (DEV PANEL) === */
-    #dev-panel {
-      position: absolute; top: 20px; right: 20px; width: 320px; z-index: 250; display: none;
-      background: rgba(10, 10, 10, 0.95); border: 1px solid #333; padding: 20px;
-      backdrop-filter: blur(5px); color: #ccc; font-size: 0.85rem;
-    }
+    #hud { position: absolute; top: 20px; left: 20px; z-index: 100; display: none; background: rgba(0, 0, 0, 0.8); padding: 15px; border-left: 4px solid #0ff; font-size: 0.95rem; }
+    .hud-value { color: #fff; font-weight: bold; }
+    #panic-btn { position: absolute; bottom: 20px; left: 20px; z-index: 300; display: none; background: transparent; color: #ff0055; border: 2px solid #ff0055; padding: 12px 24px; font-size: 1rem; cursor: pointer; font-weight: bold; text-transform: uppercase; }
+    #panic-btn.muted { background: #ff0055; color: #fff; }
+    #dev-panel { position: absolute; top: 20px; right: 20px; width: 320px; z-index: 250; display: none; background: rgba(10, 10, 10, 0.95); border: 1px solid #333; padding: 20px; backdrop-filter: blur(5px); color: #ccc; font-size: 0.85rem; }
     #dev-panel h3 { color: #fff; margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; font-size: 1rem; text-transform: uppercase;}
     .control-group { margin-bottom: 18px; }
     label { display: flex; justify-content: space-between; margin-bottom: 5px; font-weight: bold; }
     input[type=range] { width: 100%; cursor: pointer; accent-color: #0ff; }
     .dev-val { color: #0ff; }
-    .dev-desc { display: block; color: #666; font-size: 0.75rem; margin-top: 3px; line-height: 1.2; }
   </style>
 </head>
 <body>
 
   <div id="ui-container">
-    <h1>HUMAN SYNTH // DIGITAL INJECT</h1>
+    <h1>VJ OS // INIZIALIZZAZIONE</h1>
     <div style="color:#aaa; max-width: 500px; margin: 0 auto 20px; text-align: left; font-size: 0.9rem;">
-      <p><b>ISTRUZIONI VJ LIVE:</b></p>
-      <ol>
-        <li>Apri una nuova scheda con <b>YouTube</b> o <b>Spotify</b> e metti in Play.</li>
-        <li>Clicca il bottone qui sotto.</li>
-        <li>Nel popup, scegli <b>"Scheda Chrome"</b> (o Edge).</li>
-        <li>Seleziona la scheda della musica e spunta <b>"Condividi l'audio della scheda"</b>!</li>
-      </ol>
+      <p>Seleziona la sorgente audio:</p>
+      <ul>
+        <li><b>PRO MODE:</b> Usa la condivisione della scheda per intercettare YouTube/Spotify in digitale puro (Senza Larsen).</li>
+        <li><b>SAFE MODE:</b> Usa il microfono classico se il browser blocca la cattura scheda.</li>
+      </ul>
     </div>
-    <button class="btn" id="start-btn">INTERCETTA AUDIO SCHEDA</button>
+    
+    <button class="btn btn-pro" id="btn-tab">🌐 CATTURA SCHEDA (PRO)</button><br>
+    <button class="btn btn-safe" id="btn-mic">🎤 USA MICROFONO (SAFE)</button>
   </div>
 
   <div id="hud">
-    <div>DIGITAL IN: <span id="val-db" class="hud-value">-∞ dB</span></div>
+    <div>AUDIO IN: <span id="val-db" class="hud-value">-∞ dB</span></div>
     <hr style="border-color:#333; margin: 10px 0;">
     <div>PITCH (Asse X): <span id="val-pitch" class="hud-value">0 semi</span></div>
     <div>DELAY (Bocca): <span id="val-delay" class="hud-value">0%</span></div>
@@ -81,152 +67,132 @@
 
   <div id="dev-panel">
     <h3>Dev Panel // Matrix</h3>
-    
-    <div class="control-group">
-      <label><span>Input Gain</span> <span id="lbl-gain" class="dev-val">0 dB</span></label>
-      <input type="range" id="ctrl-gain" min="-40" max="20" step="1" value="0">
-      <span class="dev-desc">Guadagno digitale in ingresso.</span>
-    </div>
-
-    <div class="control-group">
-      <label><span>Max Delay Wetness</span> <span id="lbl-maxdelay" class="dev-val">80%</span></label>
-      <input type="range" id="ctrl-maxdelay" min="10" max="100" step="1" value="80">
-      <span class="dev-desc">Hard-limit per il mix dell'effetto Delay.</span>
-    </div>
-
-    <div class="control-group">
-      <label><span>Asse Y Sensibilità</span> <span id="lbl-ysens" class="dev-val">1.0x</span></label>
-      <input type="range" id="ctrl-ysens" min="0.5" max="3" step="0.1" value="1.0">
-      <span class="dev-desc">Moltiplica la reattività del movimento testa Su/Giù.</span>
-    </div>
+    <div class="control-group"><label><span>Input Gain</span> <span id="lbl-gain" class="dev-val">0 dB</span></label><input type="range" id="ctrl-gain" min="-40" max="20" step="1" value="0"></div>
+    <div class="control-group"><label><span>Max Delay Wet</span> <span id="lbl-maxdelay" class="dev-val">80%</span></label><input type="range" id="ctrl-maxdelay" min="10" max="100" step="1" value="80"></div>
+    <div class="control-group"><label><span>Asse Y Sensibilità</span> <span id="lbl-ysens" class="dev-val">1.0x</span></label><input type="range" id="ctrl-ysens" min="0.5" max="3" step="0.1" value="1.0"></div>
   </div>
 
   <button id="panic-btn">🔇 Mute Master Output</button>
 
   <script>
-    let video;
-    let facemesh;
+    let video, facemesh;
     let predictions = [];
     
-    // Nodi Audio Tone.js
     let inGain, pitchShift, feedbackDelay, djLowpass, djHighpass, limiter, meter;
-    
-    // Variabili di Stato Audio
-    let currentPitch = 0;
-    let currentDelayWet = 0;
-    let currentLpfFreq = 20000;
-    let currentHpfFreq = 0;
+    let currentPitch = 0, currentDelayWet = 0, currentLpfFreq = 20000, currentHpfFreq = 0;
     let isMuted = false;
+
+    // --- VARIABILI DI STATO DIAGNOSTICO ---
+    let sysState = "IDLE"; // IDLE, REQ_AUDIO, REQ_WEBCAM, LOAD_AI, RUNNING
+    let errorMessage = "";
 
     function setup() {
       createCanvas(windowWidth, windowHeight);
-      document.getElementById('start-btn').addEventListener('click', startSystem);
+      document.getElementById('btn-tab').addEventListener('click', () => bootSystem('TAB'));
+      document.getElementById('btn-mic').addEventListener('click', () => bootSystem('MIC'));
       document.getElementById('panic-btn').addEventListener('click', toggleMute);
       initDevPanelListeners();
     }
 
-    async function startSystem() {
-      await Tone.start(); // Sblocca l'audio nel browser
-
-      // 1. CATTURA AUDIO DIGITALE DALLA SCHEDA (VIRTUAL CABLE NATIVO)
-      let displayStream;
-      try {
-        displayStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true, // Richiesto per mostrare il popup
-          audio: {
-            suppressLocalAudioPlayback: true, // Muta la scheda originale (NO DOPPIO AUDIO!)
-            echoCancellation: false,          // Disattiva filtri voce per audio High Fidelity
-            noiseSuppression: false,
-            autoGainControl: false
-          }
-        });
-      } catch (err) {
-        alert("Devi selezionare una scheda e spuntare 'Condividi audio'!");
-        return;
-      }
-
-      if (displayStream.getAudioTracks().length === 0) {
-        alert("Hai condiviso lo schermo ma NON l'audio! Ricarica la pagina e riprova.");
-        return;
-      }
-
-      // 2. INIEZIONE DELLO STREAM IN TONE.JS
-      const audioContext = Tone.getContext().rawContext;
-      const mediaStreamSource = audioContext.createMediaStreamSource(displayStream);
-
-      // 3. CREAZIONE CATENA EFFETTI
-      inGain = new Tone.Volume(0);
-      pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.03 });
-      feedbackDelay = new Tone.FeedbackDelay("8n", 0.6);
-      feedbackDelay.wet.value = 0; 
+    async function bootSystem(mode) {
+      document.getElementById('ui-container').style.display = 'none'; // Nascondi UI HTML
+      await Tone.start();
       
-      djLowpass = new Tone.Filter(20000, "lowpass");
-      djHighpass = new Tone.Filter(0, "highpass");
-      limiter = new Tone.Limiter(-2); 
-      meter = new Tone.Meter();
+      let audioStream;
+      sysState = "REQ_AUDIO";
 
-      // Routing Audio
-      Tone.connect(mediaStreamSource, inGain); 
-      inGain.chain(pitchShift, feedbackDelay, djLowpass, djHighpass, limiter, Tone.Destination);
-      inGain.connect(meter);
+      // 1. SETUP AUDIO (TAB o MIC)
+      try {
+        if (mode === 'TAB') {
+          audioStream = await navigator.mediaDevices.getDisplayMedia({
+            video: true,
+            audio: { suppressLocalAudioPlayback: true, echoCancellation: false, noiseSuppression: false }
+          });
+          if (audioStream.getAudioTracks().length === 0) throw new Error("Spunta 'Condividi Audio' mancante.");
+        } else {
+          audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+        }
+      } catch (err) {
+        sysState = "ERROR";
+        errorMessage = err.message || "Permesso Audio Negato o Annullato.";
+        return; // Ferma tutto
+      }
 
-      // 4. AGGIORNAMENTO UI
-      document.getElementById('ui-container').style.display = 'none';
-      document.getElementById('hud').style.display = 'block';
-      document.getElementById('dev-panel').style.display = 'block';
-      document.getElementById('panic-btn').style.display = 'block';
+      // 2. ROUTING TONE.JS
+      try {
+        const audioContext = Tone.getContext().rawContext;
+        const mediaStreamSource = audioContext.createMediaStreamSource(audioStream);
 
-      // 5. SETUP WEBCAM E INTELLIGENZA ARTIFICIALE
-      video = createCapture(VIDEO);
-      video.size(640, 480);
+        inGain = new Tone.Volume(0);
+        pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.03 });
+        feedbackDelay = new Tone.FeedbackDelay("8n", 0.6);
+        feedbackDelay.wet.value = 0; 
+        djLowpass = new Tone.Filter(20000, "lowpass");
+        djHighpass = new Tone.Filter(0, "highpass");
+        limiter = new Tone.Limiter(-2); 
+        meter = new Tone.Meter();
+
+        Tone.connect(mediaStreamSource, inGain); 
+        inGain.chain(pitchShift, feedbackDelay, djLowpass, djHighpass, limiter, Tone.Destination);
+        inGain.connect(meter);
+      } catch (err) {
+        sysState = "ERROR"; errorMessage = "Errore nel motore audio Tone.js"; return;
+      }
+
+      // 3. SETUP WEBCAM (Con Callback)
+      sysState = "REQ_WEBCAM";
+      video = createCapture(VIDEO, () => {
+        // La webcam si è accesa!
+        sysState = "LOAD_AI";
+        
+        // 4. SETUP FACEMESH (Con Callback)
+        facemesh = ml5.facemesh(video, () => {
+          sysState = "RUNNING"; // TUTTO PRONTO!
+          
+          // Mostra i pannelli HUD solo quando tutto è pronto
+          document.getElementById('hud').style.display = 'block';
+          document.getElementById('dev-panel').style.display = 'block';
+          document.getElementById('panic-btn').style.display = 'block';
+        });
+
+        facemesh.on("predict", results => { predictions = results; });
+      });
       video.hide();
-      facemesh = ml5.facemesh(video, () => console.log("FaceMesh Inizializzato."));
-      facemesh.on("predict", results => { predictions = results; });
     }
 
+    // --- LE ALTRE FUNZIONI JS RESTANO IDENTICHE ---
     function initDevPanelListeners() {
-      document.getElementById('ctrl-gain').addEventListener('input', e => { 
-        document.getElementById('lbl-gain').innerText = `${e.target.value} dB`; 
-        if (inGain) inGain.volume.rampTo(e.target.value, 0.1); 
-      });
-      document.getElementById('ctrl-maxdelay').addEventListener('input', e => { 
-        document.getElementById('lbl-maxdelay').innerText = `${e.target.value}%`; 
-      });
-      document.getElementById('ctrl-ysens').addEventListener('input', e => { 
-        document.getElementById('lbl-ysens').innerText = `${e.target.value}x`; 
-      });
+      document.getElementById('ctrl-gain').addEventListener('input', e => { document.getElementById('lbl-gain').innerText = `${e.target.value} dB`; if (inGain) inGain.volume.rampTo(e.target.value, 0.1); });
+      document.getElementById('ctrl-maxdelay').addEventListener('input', e => { document.getElementById('lbl-maxdelay').innerText = `${e.target.value}%`; });
+      document.getElementById('ctrl-ysens').addEventListener('input', e => { document.getElementById('lbl-ysens').innerText = `${e.target.value}x`; });
     }
 
     function toggleMute() {
       isMuted = !isMuted;
       Tone.Destination.mute = isMuted;
       const btn = document.getElementById('panic-btn');
-      if (isMuted) { 
-        btn.innerText = "🔊 UNMUTE MASTER"; btn.classList.add('muted'); 
-      } else { 
-        btn.innerText = "🔇 MUTE MASTER OUTPUT"; btn.classList.remove('muted'); 
-      }
+      if (isMuted) { btn.innerText = "🔊 UNMUTE MASTER"; btn.classList.add('muted'); } 
+      else { btn.innerText = "🔇 MUTE MASTER OUTPUT"; btn.classList.remove('muted'); }
     }
 
     function draw() {
-      background(0, 0, 0, 70); // Effetto trail
-      if (!video) return;
+      background(5, 5, 10, 80); // Sfondo blu scuro scia
 
+      // --- RENDER DIAGNOSTICO (SE NON È RUNNING) ---
+      if (sysState !== "RUNNING") {
+        drawDiagnostics();
+        return; // Ferma il rendering del glitch video finché non è tutto pronto
+      }
+
+      // --- RENDER NORMALE (SE È RUNNING) ---
       let db = meter ? meter.getValue() : -100;
       let visualLevel = map(db, -40, -10, 0, 1, true); 
       document.getElementById('val-db').innerText = isFinite(db) ? db.toFixed(1) + " dB" : "-∞ dB";
 
       push();
-      translate(width, 0); 
-      scale(-1, 1); // Specchia webcam
-      
-      // Terremoto visivo a tempo di musica
+      translate(width, 0); scale(-1, 1); 
       let shakeIntensity = visualLevel * 30;
-      translate(
-        width/2 - video.width/2 + random(-shakeIntensity, shakeIntensity), 
-        height/2 - video.height/2 + random(-shakeIntensity, shakeIntensity)
-      );
-      
+      translate(width/2 - video.width/2 + random(-shakeIntensity, shakeIntensity), height/2 - video.height/2 + random(-shakeIntensity, shakeIntensity));
       tint(255, 60 + (visualLevel * 100));
       image(video, 0, 0);
 
@@ -237,25 +203,40 @@
       pop();
     }
 
+    function drawDiagnostics() {
+      fill(0, 255, 255);
+      noStroke();
+      textAlign(CENTER, CENTER);
+      
+      if (sysState === "IDLE") {
+        // L'HTML UI sta coprendo lo schermo, non facciamo nulla
+      } else if (sysState === "REQ_AUDIO") {
+        textSize(24); text("ATTESA SORGENTE AUDIO...", width/2, height/2);
+        textSize(16); text("Accetta il popup del browser per continuare.", width/2, height/2 + 30);
+      } else if (sysState === "REQ_WEBCAM") {
+        textSize(24); text("ATTESA WEBCAM...", width/2, height/2);
+        textSize(16); text("Il browser sta accendendo la telecamera.", width/2, height/2 + 30);
+      } else if (sysState === "LOAD_AI") {
+        textSize(24); fill(255, 0, 255); text("CARICAMENTO RETE NEURALE FACEMESH...", width/2, height/2);
+        textSize(16); text("Scaricamento dei pesi (può richiedere qualche secondo)...", width/2, height/2 + 30);
+      } else if (sysState === "ERROR") {
+        textSize(24); fill(255, 0, 0); text("ERRORE DI SISTEMA", width/2, height/2 - 20);
+        textSize(16); text(errorMessage, width/2, height/2 + 20);
+        text("Ricarica la pagina e riprova in Safe Mode.", width/2, height/2 + 50);
+      }
+    }
+
     function drawTechMask(visualLevel) {
       const keypoints = predictions[0].scaledMesh;
-      
       let r = map(currentDelayWet, 0, 1, 0, 255);
       let g = map(Math.abs(currentPitch), 0, 12, 255, 0);
       let b = 255;
-      
-      // Cambio colore in base al filtro
-      if (currentHpfFreq > 500) b = 255; 
-      else if (currentLpfFreq < 5000) b = 0;
+      if (currentHpfFreq > 500) b = 255; else if (currentLpfFreq < 5000) b = 0;
 
-      stroke(r, g, b, 200);
-      strokeWeight(1.5 + (visualLevel * 3));
-      noFill();
-
+      stroke(r, g, b, 200); strokeWeight(1.5 + (visualLevel * 3)); noFill();
       beginShape(POINTS);
       for (let j = 0; j < keypoints.length; j++) {
-        let [x, y] = keypoints[j]; 
-        point(x, y);
+        let [x, y] = keypoints[j]; point(x, y);
       }
       endShape();
     }
@@ -265,66 +246,40 @@
       let maxDelayLimit = parseFloat(document.getElementById('ctrl-maxdelay').value) / 100;
       let ySens = parseFloat(document.getElementById('ctrl-ysens').value);
 
-      // --- 1. DELAY (Bocca - Asse Z virtuale) ---
-      const topLip = keypoints[13];
-      const bottomLip = keypoints[14];
+      // DELAY
+      const topLip = keypoints[13], bottomLip = keypoints[14];
       let adjustedMouth = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
-      
-      let targetDelayWet = 0;
-      if (adjustedMouth > 15) { targetDelayWet = map(adjustedMouth, 15, 60, 0, 1, true); }
+      let targetDelayWet = adjustedMouth > 15 ? map(adjustedMouth, 15, 60, 0, 1, true) : 0;
       currentDelayWet = Math.min(targetDelayWet, maxDelayLimit);
       feedbackDelay.wet.rampTo(currentDelayWet, 0.1);
 
-
-      // --- 2. PITCH SHIFT (Testa Destra/Sinistra - Asse X) ---
+      // PITCH X
       const nose = keypoints[1];
       let noseOffsetX = nose[0] - (video.width / 2);
-      
       let targetPitch = map(noseOffsetX, -150, 150, -12, 12, true) * -1; 
-      
-      if (Math.abs(noseOffsetX) < 25) { 
-        targetPitch = 0; 
-        pitchShift.wet.rampTo(0, 0.1); 
-      } else { 
-        pitchShift.wet.rampTo(1, 0.1); 
-      }
+      if (Math.abs(noseOffsetX) < 25) { targetPitch = 0; pitchShift.wet.rampTo(0, 0.1); } 
+      else { pitchShift.wet.rampTo(1, 0.1); }
       currentPitch = lerp(currentPitch, targetPitch, 0.1);
       pitchShift.pitch = currentPitch;
 
-
-      // --- 3. DJ FILTER (Testa Su/Giù - Asse Y) ---
+      // FILTER Y
       let noseOffsetY = (nose[1] - (video.height / 2)) * ySens;
-      let targetLpf = 20000;
-      let targetHpf = 0;
-      let filterStatus = "BYPASS";
-      let filterColor = "#ffcc00";
-
+      let targetLpf = 20000, targetHpf = 0, filterStatus = "BYPASS", filterColor = "#ffcc00";
       if (noseOffsetY < -30) {
-        // High Pass
-        targetHpf = map(noseOffsetY, -30, -150, 0, 6000, true); 
-        filterStatus = "HIGH-PASS"; filterColor = "#00ffff";
+        targetHpf = map(noseOffsetY, -30, -150, 0, 6000, true); filterStatus = "HIGH-PASS"; filterColor = "#00ffff";
       } else if (noseOffsetY > 30) {
-        // Low Pass
-        targetLpf = map(noseOffsetY, 30, 150, 20000, 200, true); 
-        filterStatus = "LOW-PASS"; filterColor = "#ff0055";
+        targetLpf = map(noseOffsetY, 30, 150, 20000, 200, true); filterStatus = "LOW-PASS"; filterColor = "#ff0055";
       }
-
       currentLpfFreq = lerp(currentLpfFreq, targetLpf, 0.1);
       currentHpfFreq = lerp(currentHpfFreq, targetHpf, 0.1);
-      
       djLowpass.frequency.rampTo(currentLpfFreq, 0.1);
       djHighpass.frequency.rampTo(currentHpfFreq, 0.1);
 
-
-      // --- 4. AGGIORNAMENTO HUD ---
       document.getElementById('val-pitch').innerText = currentPitch.toFixed(1) + " semi";
       document.getElementById('val-delay').innerText = (currentDelayWet * 100).toFixed(0) + "%";
-      
       const filterHUD = document.getElementById('val-filter');
-      filterHUD.innerText = filterStatus; 
-      filterHUD.style.color = filterColor;
+      filterHUD.innerText = filterStatus; filterHUD.style.color = filterColor;
     }
-
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
   </script>
 </body>
