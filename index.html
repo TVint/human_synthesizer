@@ -128,12 +128,9 @@
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.05;
 
-       flanger = new Tone.Flanger({
-          delayTime: 0.5, 
-          depth: 1, 
-          feedback: 0.8 
+        flanger = new Tone.Chorus(4, 2.5, 0.5).start();
+          flanger.wet.value = 0;
         });
-        flanger.wet.value = 0;
 
         feedbackDelay = new Tone.FeedbackDelay("16n", 0.95);
         feedbackDelay.wet.value = 0;
