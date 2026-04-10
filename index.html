@@ -9,54 +9,64 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   
   <style>
-    body { margin: 0; padding: 0; background-color: #000; color: #ff0033; font-family: 'Courier New', Courier, monospace; overflow: hidden; }
+    /* --- STILE UI AGGIORNATO (Cyberpunk / Glassmorphism) --- */
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
+
+    body { 
+      margin: 0; padding: 0; background-color: #050505; color: #ff2a5f; 
+      font-family: 'Rajdhani', sans-serif; overflow: hidden; 
+    }
     
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(10, 0, 0, 0.95); border: 2px solid #ff0033; padding: 40px; text-align: center;
-      z-index: 200; box-shadow: 0 0 50px rgba(255, 0, 51, 0.6); width: 450px;
+      background: rgba(15, 5, 10, 0.7); border: 1px solid rgba(255, 42, 95, 0.3); 
+      padding: 50px; text-align: center; z-index: 200; width: 450px;
+      backdrop-filter: blur(12px); border-radius: 15px;
+      box-shadow: 0 0 40px rgba(255, 42, 95, 0.15), inset 0 0 20px rgba(255, 42, 95, 0.05);
     }
     
-    h1 { margin-top: 0; font-size: 2.5rem; letter-spacing: 5px; color: #ff0033; text-shadow: 2px 2px #00ffff; }
+    h1 { 
+      margin-top: 0; font-size: 3rem; letter-spacing: 6px; color: #ff2a5f; 
+      text-shadow: 0 0 10px rgba(255, 42, 95, 0.8), 2px 2px 0px #00ffff; 
+      margin-bottom: 10px;
+    }
     
-    #status-msg { margin: 20px 0; color: #aaa; font-size: 1rem; line-height: 1.5; min-height: 40px; }
+    #status-msg { 
+      margin: 20px 0; color: #e0e0e0; font-size: 1.2rem; line-height: 1.6; 
+      min-height: 60px; font-weight: 500;
+    }
     
     .btn {
-      display: inline-block; padding: 20px 40px; margin-top: 10px; font-size: 1.5rem;
-      background: #ff0033; color: #000; border: none; cursor: pointer; 
-      text-transform: uppercase; font-weight: bold; transition: 0.1s;
+      display: inline-block; padding: 18px 45px; margin-top: 15px; font-size: 1.4rem;
+      background: linear-gradient(45deg, #ff2a5f, #ff0033); color: #fff; 
+      border: none; cursor: pointer; text-transform: uppercase; font-weight: 700; 
+      border-radius: 8px; letter-spacing: 2px; transition: all 0.2s ease;
+      box-shadow: 0 5px 15px rgba(255, 42, 95, 0.4);
     }
-    .btn:hover { background: #fff; color: #ff0033; }
-    .btn:active { transform: scale(0.95); }
+    .btn:hover { 
+      transform: translateY(-2px); box-shadow: 0 8px 25px rgba(255, 42, 95, 0.6); 
+      background: linear-gradient(45deg, #ff0033, #ff2a5f);
+    }
+    .btn:active { transform: translateY(2px); box-shadow: 0 2px 10px rgba(255, 42, 95, 0.4); }
 
     #hud {
-      position: absolute; top: 20px; left: 20px; z-index: 100; display: none;
-      background: rgba(0, 0, 0, 0.85); padding: 20px; border-left: 5px solid #ff0033;
+      position: absolute; top: 30px; left: 30px; z-index: 100; display: none;
+      background: rgba(10, 5, 5, 0.6); padding: 25px; border-left: 4px solid #00ffff;
+      backdrop-filter: blur(8px); border-radius: 0 10px 10px 0;
     }
-    .hud-title { font-size: 1.2rem; font-weight: bold; margin-bottom: 10px; text-decoration: underline; }
-    .hud-row { margin-bottom: 8px; font-size: 1.1rem; }
-    .hud-val { color: #fff; font-weight: bold; }
+    .hud-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 15px; color: #00ffff; letter-spacing: 2px;}
+    .hud-row { margin-bottom: 10px; font-size: 1.2rem; color: #ccc;}
+    .hud-val { color: #fff; font-weight: 700; font-family: monospace; font-size: 1.3rem;}
     
     #panic {
-      position: absolute; bottom: 20px; right: 20px; z-index: 300; display: none;
-      background: #ff0033; color: #fff; border: 2px solid #fff;
-      padding: 15px 30px; font-size: 1.2rem; cursor: pointer; font-weight: bold;
+      position: absolute; bottom: 30px; right: 30px; z-index: 300; display: none;
+      background: transparent; color: #ff2a5f; border: 2px solid #ff2a5f;
+      padding: 15px 30px; font-size: 1.2rem; cursor: pointer; font-weight: 700;
+      border-radius: 8px; transition: 0.3s; font-family: 'Rajdhani', sans-serif;
     }
+    #panic:hover { background: #ff2a5f; color: #000; }
     
-    @keyframes shake {
-      0% { transform: translate(1px, 1px) rotate(0deg); }
-      10% { transform: translate(-1px, -2px) rotate(-1deg); }
-      20% { transform: translate(-3px, 0px) rotate(1deg); }
-      30% { transform: translate(3px, 2px) rotate(0deg); }
-      40% { transform: translate(1px, -1px) rotate(1deg); }
-      50% { transform: translate(-1px, 2px) rotate(-1deg); }
-      60% { transform: translate(-3px, 1px) rotate(0deg); }
-      70% { transform: translate(3px, 1px) rotate(-1deg); }
-      80% { transform: translate(-1px, -1px) rotate(1deg); }
-      90% { transform: translate(1px, 2px) rotate(0deg); }
-      100% { transform: translate(1px, -2px) rotate(-1deg); }
-    }
-    .glitch-active { animation: shake 0.5s infinite; color: #fff; }
+    .glitch-active { border-left-color: #ff2a5f !important; box-shadow: -10px 0 20px rgba(255,42,95,0.4); }
   </style>
 </head>
 <body>
@@ -64,19 +74,19 @@
   <div id="ui-container">
     <h1>SYS.ERROR</h1>
     <div id="status-msg">
-      <b>ATTENZIONE:</b> Il volume verrà settato al 50% in modalità sicurezza.<br><br>
-      Cliccando il pulsante sottostante autorizzi l'attivazione dei sensori (A/V).
+      <span style="color: #ff2a5f;"><b>ATTENZIONE:</b></span> Il volume verrà settato al 50% in modalità sicurezza.<br><br>
+      Cliccando il pulsante autorizzi l'attivazione dei sensori ambientali (A/V).
     </div>
     <button class="btn" id="action-btn" onclick="window.igniteSystem()">IGNITE SYSTEM</button>
   </div>
 
   <div id="hud">
-    <div class="hud-title">DIAGNOSTICA ERRORE</div>
+    <div class="hud-title">DIAGNOSTICA ATTIVA</div>
     <div class="hud-row">MIC LEVEL: <span id="val-db" class="hud-val">-∞</span> dB</div>
     <div class="hud-row">FEEDBACK (Bocca): <span id="val-delay" class="hud-val">0</span>%</div>
     <div class="hud-row">MUTATION (Testa X): <span id="val-pitch" class="hud-val">0</span> semi</div>
     <div class="hud-row">FLANGER (Testa Y): <span id="val-flanger" class="hud-val">0</span>%</div>
-    <div id="warning" style="color: #00ffff; margin-top: 15px; font-weight: bold; display: none;">CRITICAL LOOP DETECTED</div>
+    <div id="warning" style="color: #ff2a5f; margin-top: 15px; font-weight: bold; font-size: 1.2rem; display: none; text-shadow: 0 0 10px #ff2a5f;">⚠ CRITICAL LOOP DETECTED</div>
   </div>
 
   <button id="panic" onclick="window.emergencyMute()">EMERGENCY STOP (MUTE)</button>
@@ -95,53 +105,49 @@
       canvas.style('z-index', '-1');
     }
 
-    // --- AVVIO SINGOLO (Tutto in un click) ---
+    // --- AVVIO SINGOLO E SICURO ---
     window.igniteSystem = async function() {
       const msg = document.getElementById('status-msg');
       const btn = document.getElementById('action-btn');
       
       btn.style.display = 'none';
-      msg.innerHTML = "<span style='color:#00ffff; font-weight:bold;'>ATTESA AUTORIZZAZIONE...</span><br>Controlla il popup del browser in alto a sinistra.";
+      msg.innerHTML = "<span style='color:#00ffff; font-weight:bold; font-size: 1.4rem;'>ATTESA AUTORIZZAZIONE...</span><br><br>Consenti l'accesso dal popup del browser.";
       
       try {
-        // 1. Chiediamo permessi Mic e Camera contemporaneamente (Un solo popup per l'utente)
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        // 1. Richiesta nativa di entrambi i permessi insieme
+        await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
         
-        msg.innerHTML = "<span style='color:#fff;'>Inizializzazione Nodi Audio...</span>";
+        msg.innerHTML = "<span style='color:#fff;'>Inizializzazione Motore Audio...</span>";
         await Tone.start();
         
-        // 2. SETUP AUDIO
+        // 2. SETUP NODI AUDIO
         mic = new Tone.UserMedia();
         
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.05;
 
-        // Flanger Estremo per l'asse Y
         flanger = new Tone.Flanger({ delayTime: 0.5, depth: 1, feedback: 0.8 });
         flanger.wet.value = 0;
 
         feedbackDelay = new Tone.FeedbackDelay("16n", 0.95);
         feedbackDelay.wet.value = 0;
 
-        // Master Volume bloccato a -6dB (50% circa di percezione) per sicurezza
-        masterVol = new Tone.Volume(-6);
+        masterVol = new Tone.Volume(-6); // Volume limitato
         limiter = new Tone.Limiter(-1);
         meter = new Tone.Meter();
 
-        // Connessione diretta dello stream autorizzato
-        mic.setStream(stream);
+        // 3. FIX ERRORE: Usiamo il comando nativo corretto open() per accendere il mic
+        await mic.open(); 
         
-        // Routing: Mic -> Pitch -> Flanger -> Delay -> Vol -> Limiter -> Casse
+        // Routing
         mic.chain(pitchShift, flanger, feedbackDelay, masterVol, limiter, Tone.Destination);
         mic.connect(meter);
 
-        msg.innerHTML = "<span style='color:#ff0033;'>Caricamento Rete Neurale (AI)...</span>";
+        msg.innerHTML = "<span style='color:#ff2a5f;'>Caricamento Rete Neurale (AI)...</span>";
 
-        // 3. SETUP VIDEO & AI
-        // Usiamo la traccia video che abbiamo già autorizzato
+        // 4. SETUP VIDEO E FACEMESH
         video = createCapture(VIDEO, () => {
           facemesh = ml5.facemesh(video, () => {
-            // SISTEMA PRONTO!
             isRunning = true;
             document.getElementById('ui-container').style.display = 'none';
             document.getElementById('hud').style.display = 'block';
@@ -152,9 +158,10 @@
         video.hide();
 
       } catch (e) {
-        msg.innerHTML = "<span style='color:red; font-weight:bold;'>ERRORE SISTEMA:</span> " + e.name + "<br>Accesso a Fotocamera o Microfono negato.";
+        msg.innerHTML = "<span style='color:#ff2a5f; font-weight:bold;'>ERRORE:</span> " + e.name + "<br>Accesso negato. Controlla le impostazioni del browser.";
         btn.style.display = 'inline-block';
         btn.innerText = "RIPROVA";
+        console.error("Errore di inizializzazione:", e);
       }
     };
 
@@ -164,12 +171,12 @@
       const btn = document.getElementById('panic');
       if (isMuted) {
         btn.innerText = "AUDIO MUTATO (CLICCA PER SBLOCCARE)";
-        btn.style.background = "#fff";
-        btn.style.color = "#ff0033";
+        btn.style.background = "#ff2a5f";
+        btn.style.color = "#000";
       } else {
         btn.innerText = "EMERGENCY STOP (MUTE)";
-        btn.style.background = "#ff0033";
-        btn.style.color = "#fff";
+        btn.style.background = "transparent";
+        btn.style.color = "#ff2a5f";
       }
     };
 
@@ -177,27 +184,22 @@
       let db = meter ? meter.getValue() : -100;
       let volNorm = map(db, -40, -5, 0, 1, true); 
       
-      background(volNorm * 50, 0, 0, 50);
+      background(volNorm * 40, 0, 10, 60);
 
       if (!isRunning) return;
 
       document.getElementById('val-db').innerText = db.toFixed(1);
 
       push();
-      translate(width, 0); 
-      scale(-1, 1);
+      translate(width, 0); scale(-1, 1);
 
-      let shake = volNorm * 50; 
+      let shake = volNorm * 40; 
       translate(width/2 - video.width/2 + random(-shake, shake), height/2 - video.height/2 + random(-shake, shake));
       
-      tint(255, 30 + (volNorm * 200));
+      tint(255, 40 + (volNorm * 180));
       
-      // Il Flanger fa virare il video sul blu/viola, il Pitch sul rosso acceso
-      if (curFlanger > 0.5) {
-         tint(100, 100, 255, 150);
-      } else if (Math.abs(curPitch) > 5) {
-         tint(255, 0, 0, 150);
-      }
+      if (curFlanger > 0.5) tint(100, 200, 255, 180);
+      else if (Math.abs(curPitch) > 5) tint(255, 42, 95, 180);
       
       image(video, 0, 0);
 
@@ -207,6 +209,7 @@
       }
       pop();
 
+      // UI dinamica in base al rumore
       if (volNorm > 0.8) {
         document.getElementById('warning').style.display = 'block';
         document.getElementById('hud').classList.add('glitch-active');
@@ -218,15 +221,14 @@
 
     function drawCyberMask(volNorm) {
       const pts = predictions[0].scaledMesh;
-      let explode = volNorm * 20;
+      let explode = volNorm * 15;
 
-      // Colore maschera cambia in base agli effetti
       let r = 255;
-      let g = map(curFlanger, 0, 1, 0, 255);
-      let b = map(Math.abs(curPitch), 0, 24, 0, 255);
+      let g = map(curFlanger, 0, 1, 42, 255);
+      let b = map(Math.abs(curPitch), 0, 24, 95, 255);
 
       stroke(r, g, b, 200);
-      strokeWeight(2 + (volNorm * 5));
+      strokeWeight(2 + (volNorm * 4));
       noFill();
 
       beginShape(POINTS);
@@ -241,32 +243,27 @@
       const pts = predictions[0].scaledMesh;
       const nose = pts[1];
 
-      // 1. BOCCA (Delay / Feedback Loop)
+      // BOCCA = Delay Feedback
       const topLip = pts[13], bottomLip = pts[14];
       let mouthDist = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       let targetDelay = mouthDist > 10 ? map(mouthDist, 10, 50, 0, 1, true) : 0;
       curDelay = lerp(curDelay, targetDelay, 0.1);
       feedbackDelay.wet.rampTo(curDelay, 0.1);
 
-      // 2. TESTA ASSE X (Pitch Mutation Estremo +/- 24 semitoni con Deadzone)
+      // ASSE X = Pitch Mutation (+/- 24)
       let noseX = nose[0] - (video.width / 2);
       let targetPitch = 0;
-      if (Math.abs(noseX) > 30) {
-        targetPitch = map(noseX, -150, 150, -24, 24, true) * -1;
-      }
+      if (Math.abs(noseX) > 30) targetPitch = map(noseX, -150, 150, -24, 24, true) * -1;
       curPitch = lerp(curPitch, targetPitch, 0.1);
       pitchShift.pitch = curPitch;
 
-      // 3. TESTA ASSE Y (Flanger con Deadzone)
+      // ASSE Y = Flanger
       let noseY = nose[1] - (video.height / 2);
       let targetFlanger = 0;
-      if (Math.abs(noseY) > 30) {
-        targetFlanger = map(Math.abs(noseY), 30, 150, 0, 1, true); 
-      }
+      if (Math.abs(noseY) > 30) targetFlanger = map(Math.abs(noseY), 30, 150, 0, 1, true); 
       curFlanger = lerp(curFlanger, targetFlanger, 0.1);
       flanger.wet.rampTo(curFlanger, 0.1);
 
-      // Aggiorna HUD
       document.getElementById('val-delay').innerText = (curDelay * 100).toFixed(0);
       document.getElementById('val-pitch').innerText = curPitch.toFixed(1);
       document.getElementById('val-flanger').innerText = (curFlanger * 100).toFixed(0);
