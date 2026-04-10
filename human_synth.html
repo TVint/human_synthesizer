@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Human Synth - VJ OS</title>
+  <title>Human Synth - VJ OS (Patch 1.1)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -18,14 +18,9 @@
     }
     h1 { margin-top: 0; font-size: 1.8rem; letter-spacing: 3px; color: #0ff; }
     
-    .btn {
-      display: inline-block; padding: 15px 30px; margin: 10px; font-size: 1.1rem;
-      background: transparent; border: 1px solid #0ff; cursor: pointer; 
-      text-transform: uppercase; font-weight: bold; transition: 0.2s;
-    }
+    .btn { display: inline-block; padding: 15px 30px; margin: 10px; font-size: 1.1rem; background: transparent; border: 1px solid #0ff; cursor: pointer; text-transform: uppercase; font-weight: bold; transition: 0.2s; }
     .btn-pro { color: #00ffff; border-color: #00ffff; }
     .btn-pro:hover { background: #00ffff; color: #000; }
-    
     .btn-safe { color: #ffcc00; border-color: #ffcc00; margin-top: 20px;}
     .btn-safe:hover { background: #ffcc00; color: #000; }
 
@@ -48,11 +43,10 @@
     <div style="color:#aaa; max-width: 500px; margin: 0 auto 20px; text-align: left; font-size: 0.9rem;">
       <p>Seleziona la sorgente audio:</p>
       <ul>
-        <li><b>PRO MODE:</b> Usa la condivisione della scheda per intercettare YouTube/Spotify in digitale puro (Senza Larsen).</li>
-        <li><b>SAFE MODE:</b> Usa il microfono classico se il browser blocca la cattura scheda.</li>
+        <li><b>PRO MODE:</b> Usa la condivisione della scheda per intercettare YouTube/Spotify in digitale puro.</li>
+        <li><b>SAFE MODE:</b> Usa il microfono classico.</li>
       </ul>
     </div>
-    
     <button class="btn btn-pro" id="btn-tab">🌐 CATTURA SCHEDA (PRO)</button><br>
     <button class="btn btn-safe" id="btn-mic">🎤 USA MICROFONO (SAFE)</button>
   </div>
@@ -82,12 +76,14 @@
     let currentPitch = 0, currentDelayWet = 0, currentLpfFreq = 20000, currentHpfFreq = 0;
     let isMuted = false;
 
-    // --- VARIABILI DI STATO DIAGNOSTICO ---
-    let sysState = "IDLE"; // IDLE, REQ_AUDIO, REQ_WEBCAM, LOAD_AI, RUNNING
+    let sysState = "IDLE"; 
     let errorMessage = "";
 
     function setup() {
-      createCanvas(windowWidth, windowHeight);
+      let cvn = createCanvas(windowWidth, windowHeight);
+      cvn.position(0, 0); // Forza il canvas sotto la UI
+      cvn.style('z-index', '-1'); 
+
       document.getElementById('btn-tab').addEventListener('click', () => bootSystem('TAB'));
       document.getElementById('btn-mic').addEventListener('click', () => bootSystem('MIC'));
       document.getElementById('panic-btn').addEventListener('click', toggleMute);
@@ -95,30 +91,30 @@
     }
 
     async function bootSystem(mode) {
-      document.getElementById('ui-container').style.display = 'none'; // Nascondi UI HTML
-      await Tone.start();
-      
+      document.getElementById('ui-container').style.display = 'none';
       let audioStream;
       sysState = "REQ_AUDIO";
 
-      // 1. SETUP AUDIO (TAB o MIC)
+      // 1. PRIMA CHIEDIAMO IL PERMESSO (Evita il timeout di Chrome)
       try {
         if (mode === 'TAB') {
           audioStream = await navigator.mediaDevices.getDisplayMedia({
             video: true,
             audio: { suppressLocalAudioPlayback: true, echoCancellation: false, noiseSuppression: false }
           });
-          if (audioStream.getAudioTracks().length === 0) throw new Error("Spunta 'Condividi Audio' mancante.");
         } else {
           audioStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
         }
       } catch (err) {
         sysState = "ERROR";
-        errorMessage = err.message || "Permesso Audio Negato o Annullato.";
-        return; // Ferma tutto
+        errorMessage = err.message || "Permesso Audio Negato.";
+        return; 
       }
 
-      // 2. ROUTING TONE.JS
+      // 2. SOLO ORA AVVIAMO TONE.JS
+      await Tone.start();
+
+      // 3. ROUTING
       try {
         const audioContext = Tone.getContext().rawContext;
         const mediaStreamSource = audioContext.createMediaStreamSource(audioStream);
@@ -139,28 +135,21 @@
         sysState = "ERROR"; errorMessage = "Errore nel motore audio Tone.js"; return;
       }
 
-      // 3. SETUP WEBCAM (Con Callback)
+      // 4. SETUP WEBCAM
       sysState = "REQ_WEBCAM";
       video = createCapture(VIDEO, () => {
-        // La webcam si è accesa!
         sysState = "LOAD_AI";
-        
-        // 4. SETUP FACEMESH (Con Callback)
         facemesh = ml5.facemesh(video, () => {
-          sysState = "RUNNING"; // TUTTO PRONTO!
-          
-          // Mostra i pannelli HUD solo quando tutto è pronto
+          sysState = "RUNNING"; 
           document.getElementById('hud').style.display = 'block';
           document.getElementById('dev-panel').style.display = 'block';
           document.getElementById('panic-btn').style.display = 'block';
         });
-
         facemesh.on("predict", results => { predictions = results; });
       });
       video.hide();
     }
 
-    // --- LE ALTRE FUNZIONI JS RESTANO IDENTICHE ---
     function initDevPanelListeners() {
       document.getElementById('ctrl-gain').addEventListener('input', e => { document.getElementById('lbl-gain').innerText = `${e.target.value} dB`; if (inGain) inGain.volume.rampTo(e.target.value, 0.1); });
       document.getElementById('ctrl-maxdelay').addEventListener('input', e => { document.getElementById('lbl-maxdelay').innerText = `${e.target.value}%`; });
@@ -176,15 +165,13 @@
     }
 
     function draw() {
-      background(5, 5, 10, 80); // Sfondo blu scuro scia
+      background(5, 5, 10, 80);
 
-      // --- RENDER DIAGNOSTICO (SE NON È RUNNING) ---
       if (sysState !== "RUNNING") {
         drawDiagnostics();
-        return; // Ferma il rendering del glitch video finché non è tutto pronto
+        return;
       }
 
-      // --- RENDER NORMALE (SE È RUNNING) ---
       let db = meter ? meter.getValue() : -100;
       let visualLevel = map(db, -40, -10, 0, 1, true); 
       document.getElementById('val-db').innerText = isFinite(db) ? db.toFixed(1) + " dB" : "-∞ dB";
@@ -204,13 +191,8 @@
     }
 
     function drawDiagnostics() {
-      fill(0, 255, 255);
-      noStroke();
-      textAlign(CENTER, CENTER);
-      
-      if (sysState === "IDLE") {
-        // L'HTML UI sta coprendo lo schermo, non facciamo nulla
-      } else if (sysState === "REQ_AUDIO") {
+      fill(0, 255, 255); noStroke(); textAlign(CENTER, CENTER);
+      if (sysState === "REQ_AUDIO") {
         textSize(24); text("ATTESA SORGENTE AUDIO...", width/2, height/2);
         textSize(16); text("Accetta il popup del browser per continuare.", width/2, height/2 + 30);
       } else if (sysState === "REQ_WEBCAM") {
@@ -218,11 +200,9 @@
         textSize(16); text("Il browser sta accendendo la telecamera.", width/2, height/2 + 30);
       } else if (sysState === "LOAD_AI") {
         textSize(24); fill(255, 0, 255); text("CARICAMENTO RETE NEURALE FACEMESH...", width/2, height/2);
-        textSize(16); text("Scaricamento dei pesi (può richiedere qualche secondo)...", width/2, height/2 + 30);
       } else if (sysState === "ERROR") {
         textSize(24); fill(255, 0, 0); text("ERRORE DI SISTEMA", width/2, height/2 - 20);
         textSize(16); text(errorMessage, width/2, height/2 + 20);
-        text("Ricarica la pagina e riprova in Safe Mode.", width/2, height/2 + 50);
       }
     }
 
@@ -235,9 +215,7 @@
 
       stroke(r, g, b, 200); strokeWeight(1.5 + (visualLevel * 3)); noFill();
       beginShape(POINTS);
-      for (let j = 0; j < keypoints.length; j++) {
-        let [x, y] = keypoints[j]; point(x, y);
-      }
+      for (let j = 0; j < keypoints.length; j++) { let [x, y] = keypoints[j]; point(x, y); }
       endShape();
     }
 
@@ -246,14 +224,12 @@
       let maxDelayLimit = parseFloat(document.getElementById('ctrl-maxdelay').value) / 100;
       let ySens = parseFloat(document.getElementById('ctrl-ysens').value);
 
-      // DELAY
       const topLip = keypoints[13], bottomLip = keypoints[14];
       let adjustedMouth = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       let targetDelayWet = adjustedMouth > 15 ? map(adjustedMouth, 15, 60, 0, 1, true) : 0;
       currentDelayWet = Math.min(targetDelayWet, maxDelayLimit);
       feedbackDelay.wet.rampTo(currentDelayWet, 0.1);
 
-      // PITCH X
       const nose = keypoints[1];
       let noseOffsetX = nose[0] - (video.width / 2);
       let targetPitch = map(noseOffsetX, -150, 150, -12, 12, true) * -1; 
@@ -262,7 +238,6 @@
       currentPitch = lerp(currentPitch, targetPitch, 0.1);
       pitchShift.pitch = currentPitch;
 
-      // FILTER Y
       let noseOffsetY = (nose[1] - (video.height / 2)) * ySens;
       let targetLpf = 20000, targetHpf = 0, filterStatus = "BYPASS", filterColor = "#ffcc00";
       if (noseOffsetY < -30) {
@@ -278,9 +253,4 @@
       document.getElementById('val-pitch').innerText = currentPitch.toFixed(1) + " semi";
       document.getElementById('val-delay').innerText = (currentDelayWet * 100).toFixed(0) + "%";
       const filterHUD = document.getElementById('val-filter');
-      filterHUD.innerText = filterStatus; filterHUD.style.color = filterColor;
-    }
-    function windowResized() { resizeCanvas(windowWidth, windowHeight); }
-  </script>
-</body>
-</html>
+      filterHUD.innerText = filterStatus; filter
