@@ -2,184 +2,166 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Sintetizzatore Umano - v0.1</title>
+  <title>VJ Portal - Face & Music</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   
   <style>
-    body { 
-      margin: 0; padding: 0; background-color: #050505; color: #0f0; 
-      font-family: 'Courier New', Courier, monospace; overflow: hidden; 
-    }
+    body { margin: 0; padding: 0; background-color: #000; overflow: hidden; font-family: monospace; color: #fff; }
     
-    /* Il bottone di avvio (necessario per sbloccare l'audio nei browser) */
     #start-btn { 
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
-      padding: 20px; font-size: 1.2rem; background: transparent; color: #0f0; 
-      border: 2px solid #0f0; cursor: pointer; z-index: 200; transition: all 0.3s;
+      padding: 20px 40px; font-size: 1.5rem; background: transparent; color: #fff; 
+      border: 2px solid #fff; cursor: pointer; transition: 0.3s; z-index: 200;
+      text-transform: uppercase; letter-spacing: 2px;
     }
-    #start-btn:hover { background: #0f0; color: #000; }
+    #start-btn:hover { background: #fff; color: #000; }
 
-    /* DEV PANEL HUD */
-    #dev-panel { 
-      position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.85); 
-      padding: 15px; border: 1px solid #333; z-index: 100; font-size: 0.9rem;
-      backdrop-filter: blur(5px);
+    #hud {
+      position: absolute; top: 20px; left: 20px; z-index: 100;
+      background: rgba(0,0,0,0.5); padding: 15px; border: 1px solid #555;
     }
-    #dev-panel h3 { margin-top: 0; color: #fff; border-bottom: 1px solid #333; padding-bottom: 5px;}
-    .control-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; color: #aaa; }
-    input[type=range] { width: 100%; cursor: pointer; }
-    .debug-info { color: #ff00ff; margin-top: 10px; }
+    .bar-container { width: 200px; height: 10px; background: #333; margin-top: 5px; }
+    #audio-bar { height: 100%; width: 0%; background: #0f0; transition: width 0.1s; }
   </style>
 </head>
 <body>
 
-  <button id="start-btn">[ INIZIALIZZA PORTALE ]</button>
+  <button id="start-btn">Accendi il Portale<br><span style="font-size: 0.8rem; opacity:0.7">Accendi la musica e clicca</span></button>
 
-  <div id="dev-panel" style="display: none;">
-    <h3>DEV PANEL // TWEAKING</h3>
-    
-    <div class="control-group">
-      <label>Oscillator Freq (Hz): <span id="oscFreqLabel">130</span></label>
-      <input type="range" id="oscFreq" min="50" max="300" value="130">
-    </div>
-
-    <div class="control-group">
-      <label>Mouth Sensitivity:</label>
-      <input type="range" id="mouthSens" min="10" max="150" value="60">
-    </div>
-
-    <div class="debug-info">
-      <div id="mouthOpenVal">Mouth Dist: 0</div>
-      <div id="filterCutoffVal">Filter Cutoff: 0 Hz</div>
+  <div id="hud" style="display: none;">
+    <div>LIVELLO MUSICA STANZA:</div>
+    <div class="bar-container"><div id="audio-bar"></div></div>
+    <div style="margin-top: 15px; font-size: 0.8rem; color:#aaa;">
+      >> Metti play alla musica<br>>> Apri la bocca per cambiare colore
     </div>
   </div>
 
   <script>
-    // --- VARIABILI GLOBALI ---
     let video;
     let facemesh;
     let predictions = [];
+    
+    // Audio Tools
+    let mic;
+    let meter;
+    let musicLevel = 0; // Da 0.0 a 1.0
 
-    // --- AUDIO NODES (Tone.js) ---
-    let isAudioStarted = false;
-    let synth;
-    let filter;
+    // Colori Dinamici
+    let portalColor = [0, 255, 0]; // Verde di base
 
-    // --- SETUP P5.JS ---
     function setup() {
       createCanvas(windowWidth, windowHeight);
       select('#start-btn').mousePressed(initSystem);
-      
-      // Listener per aggiornare le label del dev panel
-      select('#oscFreq').input(() => select('#oscFreqLabel').html(select('#oscFreq').value()));
     }
 
-    // --- INIZIALIZZAZIONE SISTEMA ---
     async function initSystem() {
-      // 1. Sblocca l'AudioContext del browser (Obbligatorio)
+      // 1. Setup Microfono e Analizzatore (Senza inviare l'audio alle casse)
       await Tone.start();
-      isAudioStarted = true;
-
-      // 2. Crea il routing audio: Synth -> Filter -> Casse
-      filter = new Tone.Filter(200, "lowpass").toDestination();
+      mic = new Tone.UserMedia();
+      meter = new Tone.Meter(); // Analizza il volume in Decibel
       
-      synth = new Tone.Synth({
-        oscillator: { type: "sawtooth" }, // Suono "ronzante" ed elettronico
-        envelope: { attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5 }
-      }).connect(filter);
+      mic.connect(meter); // Connettiamo il mic al meter, NON all'uscita master
+      mic.open().then(() => {
+        console.log("Microfono in ascolto!");
+      }).catch(e => {
+        alert("Errore microfono. Assicurati di aver dato i permessi.");
+      });
 
-      // Inizia a suonare una nota continua a volume bassissimo
-      synth.volume.value = -10; 
-      synth.triggerAttack(select('#oscFreq').value());
-
-      // 3. Nascondi onboarding, mostra Dev Panel
       select('#start-btn').hide();
-      select('#dev-panel').style('display', 'block');
+      select('#hud').style('display', 'block');
 
-      // 4. Inizializza Webcam
+      // 2. Setup Webcam e AI
       video = createCapture(VIDEO);
       video.size(640, 480);
-      video.hide(); // Nascondiamo l'elemento DOM, lo disegneremo in draw()
+      video.hide();
 
-      // 5. Carica FaceMesh
       facemesh = ml5.facemesh(video, () => console.log("FaceMesh Pronto!"));
       facemesh.on("predict", results => { predictions = results; });
     }
 
-    // --- LOOP PRINCIPALE ---
     function draw() {
-      background(10); // Sfondo quasi nero
+      // Calcola il livello della musica in tempo reale
+      if (meter) {
+        let db = meter.getValue(); // Ritorna un valore tra -100 (silenzio) e 0 (volume max)
+        // Mappiamo i Decibel in un valore comodo tra 0 e 1
+        musicLevel = map(db, -60, -10, 0, 1, true); 
+        select('#audio-bar').style('width', `${musicLevel * 100}%`);
+      }
 
-      if (!isAudioStarted || !video) return;
+      // Sfondo che "sbiadisce" invece di pulirsi subito, crea l'effetto scia
+      background(0, 0, 0, 50); 
 
-      // Centra il video nello schermo
+      if (!video) return;
+
       push();
-      translate(width/2 - video.width/2, height/2 - video.height/2);
+      translate(width, 0);
+      scale(-1, 1); // Effetto specchio corretto
       
-      // Disegna il video con opacità ridotta per un effetto "spettro"
-      tint(255, 50); 
-      image(video, 0, 0);
+      // Calcola il glitch basato sulla musica
+      // Se la musica pompa forte, l'immagine trema e si ingrandisce
+      let shakeX = (random(-1, 1) * musicLevel * 30);
+      let shakeY = (random(-1, 1) * musicLevel * 30);
+      let zoom = 1 + (musicLevel * 0.2);
+
+      translate(width/2 + shakeX, height/2 + shakeY);
+      scale(zoom);
+      
+      // Disegna il video con opacità che reagisce al beat
+      tint(255, 100 + (musicLevel * 155)); 
+      image(video, -video.width/2, -video.height/2);
 
       if (predictions.length > 0) {
-        drawTechMask();
         processBiometrics();
+        drawTechMask();
       }
       pop();
-      
-      // Aggiorna frequenza base dal Dev Panel
-      if(synth) synth.setNote(select('#oscFreq').value());
     }
 
-    // --- LA MASCHERA GRAFICA ---
     function drawTechMask() {
       const keypoints = predictions[0].scaledMesh;
       
-      stroke(0, 255, 0, 150); // Verde Matrix
-      strokeWeight(1);
-      fill(0, 255, 0, 30);
+      // La maschera diventa più spessa e luminosa quando c'è un basso forte
+      let dynamicWeight = 1 + (musicLevel * 4);
+      stroke(portalColor[0], portalColor[1], portalColor[2], 200);
+      strokeWeight(dynamicWeight);
+      
+      // Niente riempimento, solo linee
+      noFill();
 
-      // Disegna i punti base (stile Constraint Systems)
+      // Disegna le linee che collegano i punti del viso (effetto ragnatela glitch)
+      beginShape(POINTS);
       for (let j = 0; j < keypoints.length; j++) {
         let [x, y] = keypoints[j];
-        point(x, y);
+        // Riassegna le coordinate al centro dello schermo
+        point(x - video.width/2, y - video.height/2);
       }
+      endShape();
     }
 
-    // --- IL MOTORE: VISO -> AUDIO ---
     function processBiometrics() {
       const keypoints = predictions[0].scaledMesh;
-
-      // PUNTO 13 (Labbro superiore interno), PUNTO 14 (Labbro inferiore interno)
       const topLip = keypoints[13];
       const bottomLip = keypoints[14];
 
-      // Calcola quanto è aperta la bocca
       let mouthDistance = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       
-      // Scrivi nel Dev Panel
-      select('#mouthOpenVal').html(`Mouth Dist: ${mouthDistance.toFixed(2)}`);
-
-      // Ottieni la sensibilità dal Dev Panel
-      let sensitivity = parseFloat(select('#mouthSens').value());
-
-      // LA MAGIA AUDIO:
-      // Mappa l'apertura della bocca al taglio del filtro (da 200Hz a X Hz)
-      let targetCutoff = 200 + (mouthDistance * sensitivity * 10);
-      
-      // Limita la frequenza per non distruggere le orecchie (max 8000 Hz)
-      targetCutoff = constrain(targetCutoff, 200, 8000);
-
-      // Cambia la frequenza del filtro in modo fluido per evitare "click"
-      filter.frequency.rampTo(targetCutoff, 0.05);
-
-      // Aggiorna Debug
-      select('#filterCutoffVal').html(`Filter Cutoff: ${targetCutoff.toFixed(0)} Hz`);
+      // Se apri la bocca, cambi i colori RGB del portale
+      if (mouthDistance > 20) { // Soglia apertura
+        portalColor = [
+          random(100, 255), // Red
+          random(0, 100),   // Green
+          random(200, 255)  // Blue (crea toni magenta/viola/neon)
+        ];
+      } else {
+        // Torna lentamente al verde scuro quando chiudi la bocca
+        portalColor[0] = lerp(portalColor[0], 0, 0.1);
+        portalColor[1] = lerp(portalColor[1], 255, 0.1);
+        portalColor[2] = lerp(portalColor[2], 0, 0.1);
+      }
     }
 
-    // Adatta il canvas se la finestra viene ridimensionata
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
   </script>
 </body>
