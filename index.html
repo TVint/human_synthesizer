@@ -2,7 +2,8 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // TACTICAL HUD FINAL</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>VOID RIDER // MOBILE TACTICAL</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -10,51 +11,47 @@
   
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
-
-    body { 
-      margin: 0; padding: 0; background-color: #020205; color: #00ffff; 
-      font-family: 'Share Tech Mono', monospace; overflow: hidden; 
-    }
+    body { margin: 0; padding: 0; background-color: #020205; color: #00ffff; font-family: 'Share Tech Mono', monospace; overflow: hidden; }
     
+    /* ROTATION BANNER */
+    #rotate-banner {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #020205; z-index: 9999; flex-direction: column; justify-content: center; align-items: center;
+    }
+    @media screen and (orientation: portrait) { #rotate-banner { display: flex; } }
+
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(2, 5, 15, 0.95); border: 1px solid #00ffff; 
-      padding: 40px; text-align: center; z-index: 200; width: 500px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
-      clip-path: polygon(0 20px, 20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
+      padding: 30px; text-align: center; z-index: 200; width: 80%; max-width: 500px;
+      backdrop-filter: blur(10px); box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
     }
     
-    h1 { margin: 0 0 20px 0; font-size: 2.2rem; letter-spacing: 4px; border-bottom: 1px solid #00ffff; padding-bottom: 10px; }
-    #status-msg { margin-bottom: 25px; color: #88ccaa; font-size: 0.9rem; line-height: 1.6; }
+    h1 { font-size: 1.8rem; letter-spacing: 2px; border-bottom: 1px solid #00ffff; padding-bottom: 10px; margin: 0; }
+    #status-msg { margin: 20px 0; font-size: 0.9rem; line-height: 1.4; color: #88ccaa; }
+    .btn { padding: 15px 30px; background: rgba(0, 255, 255, 0.1); color: #00ffff; border: 1px solid #00ffff; cursor: pointer; text-transform: uppercase; font-weight: bold; }
     
-    .btn {
-      display: inline-block; padding: 15px 40px; margin-top: 15px; font-size: 1.2rem;
-      background: rgba(0, 255, 255, 0.1); color: #00ffff; border: 1px solid #00ffff;
-      cursor: pointer; text-transform: uppercase; font-weight: bold; 
-      border-radius: 3px; letter-spacing: 2px; transition: all 0.3s;
-      position: relative; z-index: 1000;
-    }
-    .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 15px #00ffff; }
-
     #panic {
-      position: absolute; top: 20px; right: 20px; z-index: 300; display: none;
+      position: absolute; top: 10px; right: 10px; z-index: 300; display: none;
       background: rgba(255, 0, 50, 0.2); color: #ff0032; border: 1px solid #ff0032;
-      padding: 10px 20px; cursor: pointer; text-transform: uppercase; font-size: 0.8rem;
+      padding: 8px 15px; cursor: pointer; font-size: 0.7rem;
     }
-    #panic:hover { background: #ff0032; color: #000; box-shadow: 0 0 15px #ff0032;}
   </style>
 </head>
 <body>
 
+  <div id="rotate-banner">
+    <h1 style="border:none">RUOTA IL DISPOSITIVO</h1>
+    <p>Orientamento Landscape necessario per la navigazione neurale.</p>
+  </div>
+
   <div id="ui-container">
     <h1>VOID RIDER // LINK.START()</h1>
     <div id="status-msg">
-      <b>SISTEMA HUD NEURALE V2.3 // ACOUSTIC ARMOR</b><br><br>
-      > Noise Gate: ATTIVO (Filtro rumore di fondo)<br>
-      > High-Cut EQ: ATTIVO (Prevenzione fischi)<br>
-      > Jet Flanger: CALIBRATO (0.2Hz Slow Sweep)<br>
-      <span style="color:#ff0033">> WARNING: Feedback loop controllato e isolato.</span>
+      <b>SISTEMA HUD MOBILE V2.3</b><br>
+      > Noise Gate: Attivo<br>
+      > Jet Flanger: Reattivo<br>
+      <span style="color:#ff0033">> WARNING: Feedback quantico monitorato.</span>
     </div>
     <button class="btn" id="action-btn">ESTABLISH NEURAL LINK</button>
   </div>
@@ -63,74 +60,35 @@
 
   <script>
     let video, facemesh, predictions = [];
-    let noiseGate, eq, pitchShift, chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, meter;
-    
-    let curPitch = 0, curPitchWet = 0;
-    let curSpace = 0, curFlanger = 0;
-    let headX = 0, headY = 0;
-    let isRunning = false;
+    let pitchShift, chebyshev, flangerEffect, spaceDelay, spaceReverb, meter;
+    let curPitch = 0, curPitchWet = 0, curSpace = 0, curFlanger = 0;
+    let headX = 0, headY = 0, isRunning = false;
 
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
-      canvas.position(0, 0);
-      canvas.style('z-index', '-1'); 
-      canvas.style('pointer-events', 'none'); 
+      canvas.position(0, 0); canvas.style('z-index', '-1'); canvas.style('pointer-events', 'none'); 
     }
 
     document.getElementById('action-btn').addEventListener('click', async () => {
       document.getElementById('action-btn').style.display = 'none';
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: { echoCancellation: false, noiseSuppression: false }, video: true 
-        });
-        
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
         await Tone.start();
         const micSource = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        // --- MOTORE AUDIO: SCUDO ANTI-LARSEN ---
-        // 1. Il Gate chiude il microfono se il suono ambientale scende sotto i -40dB
-        noiseGate = new Tone.Gate(-40, 0.1);
-        
-        // 2. L'EQ taglia le frequenze altissime che generano i fischi spontanei
-        eq = new Tone.EQ3(0, 0, -10);
-
+        // Audio Engine
+        let noiseGate = new Tone.Gate(-40, 0.1);
         pitchShift = new Tone.PitchShift(0);
-        pitchShift.windowSize = 0.05; 
-        pitchShift.wet.value = 0; 
-
         chebyshev = new Tone.Chebyshev(50);
-        chebyshev.wet.value = 0; 
-
-        // 3. VERO JET FLANGER: Onda lenta (0.2Hz), delay brevissimo (2ms)
-        flangerEffect = new Tone.Chorus({
-          frequency: 0.2, 
-          delayTime: 2, 
-          depth: 1, 
-          feedback: 0.85, 
-          spread: 180,
-          type: "triangle"
-        }).start();
-        flangerEffect.wet.value = 0;
-
-        spaceDelay = new Tone.FeedbackDelay("16n", 0.6); 
-        spaceDelay.wet.value = 0;
-        
+        flangerEffect = new Tone.Chorus({ frequency: 0.2, delayTime: 2, depth: 1, feedback: 0.85, spread: 180 }).start();
+        spaceDelay = new Tone.FeedbackDelay("16n", 0.6);
         spaceReverb = new Tone.Freeverb({ roomSize: 0.85, dampening: 1500 });
-        spaceReverb.wet.value = 0;
-
-        // Master Volume protettivo
-        masterVol = new Tone.Volume(-15);
-        limiter = new Tone.Limiter(-1);
+        let masterVol = new Tone.Volume(-15);
         meter = new Tone.Meter();
 
-        // --- ROUTING BLINDATO ---
         Tone.connect(micSource, noiseGate);
-        noiseGate.connect(eq);
-        eq.connect(meter); // Il meter legge solo l'audio che passa il cancello
-        eq.connect(pitchShift);
-
-        // Catena Effetti
-        pitchShift.chain(chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, Tone.Destination);
+        noiseGate.chain(meter, pitchShift);
+        pitchShift.chain(chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, Tone.Destination);
 
         video = createCapture(VIDEO, () => {
           facemesh = ml5.facemesh(video, () => {
@@ -141,166 +99,64 @@
           facemesh.on("predict", r => predictions = r);
         });
         video.hide();
-      } catch (e) { alert("Errore inizializzazione: " + e.message); }
+      } catch (e) { alert("Accesso negato: " + e.message); }
     });
 
     function draw() {
       background(3, 5, 10);
       if (!isRunning) return;
 
-      // Ricalibrazione dinamica visiva: ignora tutto ciò che è sotto i -25dB
       let db = meter.getValue();
       let vol = map(db, -25, -2, 0, 1, true);
 
-      // --- LOGICA MAPPING BIOMETRICA ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         let nose = pts[1];
         let topL = pts[13], botL = pts[14];
 
-        // BOCCA
+        // LOGICA MAPPING (Ricalibrata)
         let mDist = dist(topL[0], topL[1], botL[0], botL[1]);
-        let targetSpace = mDist > 12 ? map(mDist, 12, 35, 0, 0.85, true) : 0;
-        curSpace = lerp(curSpace, targetSpace, 0.15); 
-        spaceDelay.wet.value = curSpace;
-        spaceReverb.wet.value = curSpace;
+        curSpace = lerp(curSpace, mDist > 12 ? map(mDist, 12, 35, 0, 0.8, true) : 0, 0.2);
+        spaceDelay.wet.value = curSpace; spaceReverb.wet.value = curSpace;
 
-        // TESTA X
         headX = (video.width/2) - nose[0]; 
-        let tPitch = 0, tPitchWet = 0;
-        if (Math.abs(headX) > 25) {
-          tPitch = map(headX, -150, 150, -24, 24, true);
-          tPitchWet = map(Math.abs(headX), 25, 60, 0, 1, true); 
-        }
+        let tPitch = Math.abs(headX) > 25 ? map(headX, -150, 150, -24, 24, true) : 0;
         curPitch = lerp(curPitch, tPitch, 0.15);
-        curPitchWet = lerp(curPitchWet, tPitchWet, 0.15);
-        
-        pitchShift.pitch = curPitch;
-        pitchShift.wet.value = curPitchWet;
+        curPitchWet = lerp(curPitchWet, Math.abs(tPitch) > 0 ? 1 : 0, 0.15);
+        pitchShift.pitch = curPitch; pitchShift.wet.value = curPitchWet;
 
-        // TESTA Y (Jet Flanger rapido)
         headY = (video.height/2) - nose[1];
         let tFlange = headY > 15 ? map(headY, 15, 90, 0, 1, true) : 0;
         curFlanger = lerp(curFlanger, tFlange, 0.2); 
-        
-        chebyshev.wet.value = curFlanger;
-        flangerEffect.wet.value = curFlanger;
+        chebyshev.wet.value = curFlanger; flangerEffect.wet.value = curFlanger;
       }
 
-      // --- RENDER HUD TATTICO ---
-      drawBackgroundGrid();
-      
-      push();
-      translate(width, 0); scale(-1, 1);
-      
-      // Allarme Viscerale
-      let shake = vol > 0.85 ? random(-20, 20) : 0;
+      push(); translate(width, 0); scale(-1, 1);
+      let shake = vol > 0.8 ? random(-10, 10) : 0;
       translate(width/2 - video.width/2 + shake, height/2 - video.height/2 + shake);
       
-      let offset = map(Math.abs(curPitch), 0, 24, 0, 40);
+      let off = map(Math.abs(curPitch), 0, 24, 0, 20);
       blendMode(SCREEN);
-      tint(255, 0, 50, 140); image(video, -offset, 0);
-      tint(0, 255, 255, 140); image(video, offset, 0);
-      tint(255, 255, 255, 180); image(video, 0, 0);
+      tint(255, 0, 50, 100); image(video, -off, 0);
+      tint(0, 255, 255, 100); image(video, off, 0);
+      tint(255, 255, 255, 150); image(video, 0, 0);
       blendMode(BLEND);
-
-      if (predictions.length > 0) drawFaceOverlay(vol);
       pop();
 
+      // HUD semplificato per mobile
       drawTacticalUI(db, vol);
     }
 
-    function drawBackgroundGrid() {
-      stroke(0, 255, 255, 15); strokeWeight(1);
-      for(let x=0; x<width; x+=50) line(x, 0, x, height);
-      for(let y=0; y<height; y+=50) line(0, y, width, y);
-    }
-
-    function drawFaceOverlay(vol) {
-      let pts = predictions[0].scaledMesh;
-      stroke(0, 255, 255, 100); noFill();
-      beginShape(LINES);
-      for(let i=0; i<pts.length; i+=10) vertex(pts[i][0], pts[i][1]);
-      endShape();
-      
-      let nose = pts[1];
-      stroke(255); strokeWeight(1.5);
-      ellipse(nose[0], nose[1], 40 + vol*30);
-      line(nose[0]-30, nose[1], nose[0]+30, nose[1]);
-      line(nose[0], nose[1]-30, nose[0], nose[1]+30);
-    }
-
     function drawTacticalUI(db, vol) {
-      let isAlert = vol > 0.85;
-      let c = isAlert ? color(255, 0, 50) : color(0, 255, 255);
-      stroke(c); fill(c);
-      
-      // VU-METER
-      let rX = width/2 - 200, rY = height - 80;
-      fill(10, 20, 40, 220); stroke(c); rect(rX, rY, 400, 25, 3);
-      let w = map(vol, 0, 1, 0, 400, true);
-      noStroke(); fill(c); rect(rX, rY, w, 25, 3);
-      
-      // Redout Strobo
-      if (isAlert) {
-        fill(255, 0, 50, random(50, 130)); rect(0, 0, width, height);
-      }
-
-      textAlign(CENTER); textSize(16);
-      if (isAlert && frameCount % 6 < 3) {
-        fill(255); text("⚠ LARSEN EFFECT ALERT // FEEDBACK OVERLOAD ⚠", width/2, rY-15);
-      } else {
-        fill(c); text("NEURAL LINK TELEMETRY // AUDIO CORE MONITOR", width/2, rY-15);
-      }
-
-      // DATI TATTICI
-      textAlign(LEFT); fill(0, 255, 255, 180); textSize(14);
-      let xR=width-200, yR=100;
-      text(`> GRAVITY_X: ${curPitch.toFixed(1)} ST`, xR, yR);
-      text(`> JET_PROP: ${(curFlanger*100).toFixed(0)}%`, xR, yR+20);
-      text(`> VOID_Z: ${(curSpace*100).toFixed(0)}%`, xR, yR+40);
-      text(`> SYS.TEMP: ${map(vol, 0, 1, 100, 950).toFixed(0)} K`, xR, yR+60);
-
-      textAlign(RIGHT); fill(0, 255, 255, 80); textSize(11);
-      // Il valore del dB crudo non andrà sotto i -40 visivamente
-      let dispDb = Math.max(db, -40);
-      text(`SEC_TRACTOR_BEAM_STAT: [${dispDb.toFixed(1)}db]\n`+
-           `ASTRO_NAV_LINK: [ACTIVE]\n`+
-           `HULL_PLATING_LOAD: [${(vol*100).toFixed(1)}%]\n`+
-           `SYS.ERROR_LOG: [CLEAR]\n`, width-20, height-150);
-
-      stroke(0, 255, 255, 60); noFill(); strokeWeight(1);
-      drawHUDCorner(20, 20, 60, true);
-      drawHUDCorner(width-20, 20, 60, false);
-
-      let spX=30, spY=height-130, spW=200, spH=80;
-      rect(spX, spY, spW, spH);
-      for(let i=0; i<spW; i+=10) {
-        fill(0, 255, 255, random(30, 80)); noStroke();
-        rect(spX+i, spY+spH, 8, -random(20, spH*vol));
-      }
-
-      push(); translate(100, 100);
-      stroke(0, 255, 255, 80); ellipse(0, 0, 100, 100);
-      fill(0, 255, 255, 30); ellipse(0, 0, 50, 50);
-      line(-60, 0, 60, 0); line(0, -60, 0, 60);
-      let rx = map(headX, -150, 150, -45, 45, true);
-      let ry = map(headY, -150, 150, 45, -45, true);
-      fill(0, 255, 255); noStroke(); ellipse(rx, ry, 6, 6);
-      pop();
+      let c = vol > 0.8 ? color(255, 0, 50) : color(0, 255, 255);
+      stroke(c); noFill();
+      rect(width/2 - 150, height - 60, 300, 15);
+      fill(c); noStroke();
+      rect(width/2 - 150, height - 60, map(vol, 0, 1, 0, 300, true), 15);
+      if (vol > 0.8) { fill(255,0,0,100); rect(0,0,width,height); }
     }
 
-    function drawHUDCorner(x, y, size, left) {
-      if(left) {
-        line(x, y, x+size, y); line(x, y, x, y+size);
-        line(x, y+size+5, x, y+size+size/2); 
-      } else {
-        line(x, y, x-size, y); line(x, y, x, y+size);
-        line(x, y+size+5, x, y+size+size/2); 
-      }
-    }
-
-    window.emergencyMute = () => { Tone.Destination.mute = !Tone.Destination.mute; document.getElementById('panic').innerText = Tone.Destination.mute ? "SBLOCCA MOTORI" : "TAGLIO MOTORI"; };
+    window.emergencyMute = () => { Tone.Destination.mute = !Tone.Destination.mute; };
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
   </script>
 </body>
