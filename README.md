@@ -1,2 +1,2 @@
-# human_synthesizer
-A facial synthesizer based on p5.js and Tone.js
+# human_filter
+A facial filkter based on p5.js and Tone.js
