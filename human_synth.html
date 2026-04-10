@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Human Synth - Pro Edition (Larsen Control)</title>
+  <title>Human Synth - Pro Edition (Delay & Larsen Control)</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
@@ -58,7 +58,7 @@
   <div id="ui-container">
     <h1>HUMAN SYNTH // PRO</h1>
     <p style="color:#aaa; max-width: 400px; margin: 0 auto 20px;">
-      Inizializzazione catena audio live. Prepara i controlli del Dev Panel per mitigare il feedback acustico.
+      Inizializzazione catena audio live. Usa la bocca per innescare loop ritmici di delay.
     </p>
     <button class="btn" id="start-btn">AVVIA MOTORE AUDIO</button>
   </div>
@@ -67,7 +67,7 @@
     <div>LIVELLO MIC: <span id="val-db" class="hud-value">-∞ dB</span></div>
     <hr style="border-color:#333; margin: 10px 0;">
     <div>PITCH SHIFT: <span id="val-pitch" class="hud-value">0 semi</span></div>
-    <div>REVERB WET: <span id="val-reverb" class="hud-value">0%</span></div>
+    <div>DELAY WET: <span id="val-delay" class="hud-value">0%</span></div>
   </div>
 
   <div id="dev-panel">
@@ -81,13 +81,12 @@
     <div class="control-group">
       <label><span>Noise Gate (Taglio)</span> <span id="lbl-gate" class="dev-val">-40 dB</span></label>
       <input type="range" id="ctrl-gate" min="-80" max="-10" step="1" value="-40">
-      <small style="color:#666">Sotto questa soglia il microfono è muto.</small>
     </div>
 
     <div class="control-group">
-      <label><span>Max Reverb (Limite)</span> <span id="lbl-maxrev" class="dev-val">80%</span></label>
-      <input type="range" id="ctrl-maxrev" min="10" max="100" step="1" value="80">
-      <small style="color:#666">Troppo riverbero innesca il Larsen prima.</small>
+      <label><span>Max Delay (Limite)</span> <span id="lbl-maxdelay" class="dev-val">80%</span></label>
+      <input type="range" id="ctrl-maxdelay" min="10" max="100" step="1" value="80">
+      <small style="color:#666">Regola il tetto massimo dell'effetto echo.</small>
     </div>
 
     <div class="control-group">
@@ -104,11 +103,11 @@
     let predictions = [];
     
     // AUDIO NODES
-    let mic, inGain, gate, pitchShift, reverb, limiter, meter;
+    let mic, inGain, gate, pitchShift, delay, limiter, meter;
     
     // VARIABILI DI STATO
     let currentPitch = 0;
-    let currentReverb = 0;
+    let currentDelay = 0;
     let isMuted = false;
 
     function setup() {
@@ -116,35 +115,29 @@
       document.getElementById('start-btn').addEventListener('click', startSystem);
       document.getElementById('panic-btn').addEventListener('click', toggleMute);
       
-      // Setup Event Listeners per il Dev Panel
       setupDevControls();
     }
 
     async function startSystem() {
       await Tone.start(); 
 
-      // 1. CREAZIONE CATENA AUDIO PRO
+      // 1. CREAZIONE CATENA AUDIO
       mic = new Tone.UserMedia();
-      
-      // Gate: Chiude l'audio se è sotto una certa soglia (ferma i sussurri/ronzii)
       gate = new Tone.Gate({ threshold: -40, smoothing: 0.2 });
-      
-      // Gain: Alza o abbassa il volume generale in ingresso
       inGain = new Tone.Volume(0);
       
-      // Effetti controllati dal viso
       pitchShift = new Tone.PitchShift({ pitch: 0, windowSize: 0.05 });
-      reverb = new Tone.Freeverb({ roomSize: 0.9, dampening: 1000 });
-      reverb.wet.value = 0;
       
-      // Limiter: Il salvavita. Evita che il segnale superi lo zero e distrugga le casse
+      // SOSTITUITO RIVERBERO CON FEEDBACK DELAY
+      // "8n" = Ottavi di nota. feedback: 0.6 = l'eco si ripete abbastanza a lungo
+      delay = new Tone.FeedbackDelay("8n", 0.6);
+      delay.wet.value = 0; // Inizia pulito
+      
       limiter = new Tone.Limiter(-2); 
-      
-      // Analizzatore visivo (collegato al microfono puro)
       meter = new Tone.Meter();
 
-      // IL ROUTING: Mic -> Gate -> Gain -> Pitch -> Reverb -> Limiter -> Casse
-      mic.chain(gate, inGain, pitchShift, reverb, limiter, Tone.Destination);
+      // ROUTING
+      mic.chain(gate, inGain, pitchShift, delay, limiter, Tone.Destination);
       mic.connect(meter);
 
       try {
@@ -167,10 +160,7 @@
       facemesh.on("predict", results => { predictions = results; });
     }
 
-    // GESTIONE DEL PANNELLO SVILUPPATORE
     function setupDevControls() {
-      const getVal = id => parseFloat(document.getElementById(id).value);
-      
       document.getElementById('ctrl-gain').addEventListener('input', (e) => {
         let val = e.target.value;
         document.getElementById('lbl-gain').innerText = `${val} dB`;
@@ -183,8 +173,8 @@
         if (gate) gate.threshold = val;
       });
 
-      document.getElementById('ctrl-maxrev').addEventListener('input', (e) => {
-        document.getElementById('lbl-maxrev').innerText = `${e.target.value}%`;
+      document.getElementById('ctrl-maxdelay').addEventListener('input', (e) => {
+        document.getElementById('lbl-maxdelay').innerText = `${e.target.value}%`;
       });
 
       document.getElementById('ctrl-mouth').addEventListener('input', (e) => {
@@ -206,19 +196,17 @@
     }
 
     function draw() {
-      background(0, 0, 0, 60); // Effetto trail visivo
+      background(0, 0, 0, 60); 
 
       if (!video || !mic || mic.state !== "started") return;
 
-      // Dati visivi
       let db = meter.getValue();
       let visualLevel = map(db, -50, -10, 0, 1, true); 
       document.getElementById('val-db').innerText = db.toFixed(1) + " dB";
 
       push();
-      translate(width, 0); scale(-1, 1); // Specchia
+      translate(width, 0); scale(-1, 1); 
       
-      // Glitch sullo sfondo (intensità collegata al volume in ingresso)
       let shakeIntensity = visualLevel * 40;
       translate(width/2 - video.width/2 + random(-shakeIntensity, shakeIntensity), 
                 height/2 - video.height/2 + random(-shakeIntensity, shakeIntensity));
@@ -236,8 +224,8 @@
     function drawTechMask(visualLevel) {
       const keypoints = predictions[0].scaledMesh;
       
-      // Cromaticità reattiva al riverbero e al pitch
-      let r = map(currentReverb, 0, 1, 0, 255);
+      // La maschera diventa rossa/arancione proporzionalmente alla quantità di Delay
+      let r = map(currentDelay, 0, 1, 0, 255);
       let g = map(Math.abs(currentPitch), 0, 12, 255, 0);
       let b = 255; 
       
@@ -256,35 +244,33 @@
     function processBiometrics() {
       const keypoints = predictions[0].scaledMesh;
       
-      // Lettura variabili dal Dev Panel
-      let maxRevLimit = parseFloat(document.getElementById('ctrl-maxrev').value) / 100;
+      let maxDelayLimit = parseFloat(document.getElementById('ctrl-maxdelay').value) / 100;
       let mouthSens = parseFloat(document.getElementById('ctrl-mouth').value);
 
-      // --- 1. RIVERBERO (Bocca) ---
+      // --- 1. DELAY (Bocca) ---
       const topLip = keypoints[13];
       const bottomLip = keypoints[14];
       let mouthDistance = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       
-      // Calcolo base dell'apertura
-      let rawReverb = map(mouthDistance * mouthSens, 10, 50, 0, 1, true);
-      // Applica il limite massimo imposto dal Dev Panel per evitare Larsen estremi
-      currentReverb = Math.min(rawReverb, maxRevLimit);
+      let rawDelay = map(mouthDistance * mouthSens, 10, 50, 0, 1, true);
+      currentDelay = Math.min(rawDelay, maxDelayLimit);
       
-      reverb.wet.value = lerp(reverb.wet.value, currentReverb, 0.15);
+      // Applica il delay in modo fluido
+      delay.wet.value = lerp(delay.wet.value, currentDelay, 0.15);
 
       // --- 2. PITCH SHIFT (Testa L/R) ---
       const nose = keypoints[1];
       let noseCenterOffset = nose[0] - (video.width / 2);
       
       let targetPitch = map(noseCenterOffset, -150, 150, -12, 12, true);
-      targetPitch = targetPitch * -1; // Inverti asse
+      targetPitch = targetPitch * -1; 
       
       currentPitch = lerp(currentPitch, targetPitch, 0.1);
       pitchShift.pitch = currentPitch;
 
       // AGGIORNA HUD
-      document.getElementById('val-pitch').innerText = currentPitch.toFixed(1);
-      document.getElementById('val-reverb').innerText = (currentReverb * 100).toFixed(0) + "%";
+      document.getElementById('val-pitch').innerText = currentPitch.toFixed(1) + " semi";
+      document.getElementById('val-delay').innerText = (currentDelay * 100).toFixed(0) + "%";
     }
 
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
