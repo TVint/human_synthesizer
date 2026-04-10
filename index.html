@@ -39,6 +39,7 @@
       background: transparent; color: #00ffff; border: 2px solid #00ffff;
       cursor: pointer; text-transform: uppercase; font-weight: bold; 
       border-radius: 3px; letter-spacing: 2px; transition: all 0.3s;
+      position: relative; z-index: 1000; /* Forza il bottone in primo piano */
     }
     .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 20px #00ffff; }
 
@@ -66,7 +67,7 @@
       <b>SISTEMA DI NAVIGAZIONE NEURALE</b><br><br>
       Attivando il link, i propulsori e il reattore audio saranno vincolati ai tuoi movimenti facciali.<br><span style="color:#ff0033">Attenzione al feedback quantico (Larsen).</span>
     </div>
-    <button class="btn" id="action-btn" onclick="window.initiateNeuralLink()">ESTABLISH LINK</button>
+    <button class="btn" id="action-btn">ESTABLISH LINK</button>
   </div>
 
   <div id="hud">
@@ -85,18 +86,21 @@
     let curPitch = 0, curSpace = 0, curFlanger = 0;
     let isMuted = false, isRunning = false;
 
+    // --- SETUP P5.JS ---
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.position(0, 0);
       canvas.style('z-index', '-1');
+      canvas.style('pointer-events', 'none'); // IMPEDISCE AL CANVAS DI BLOCCARE I CLICK!
     }
 
-    // --- ACCENSIONE REATTORI ---
-    window.initiateNeuralLink = async function() {
+    // --- BINDING SICURO DEL PULSANTE ---
+    document.getElementById('action-btn').addEventListener('click', async () => {
       const msg = document.getElementById('status-msg');
       const btn = document.getElementById('action-btn');
+      
       btn.style.display = 'none';
-      msg.innerHTML = "Richiesta permessi Sensori A/V...<br>Consenti nel browser.";
+      msg.innerHTML = "<span style='color:#00ffff;'>Richiesta permessi Sensori A/V...</span><br>Consenti nel popup del browser in alto a sinistra.";
       
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -114,20 +118,21 @@
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.04;
 
-        flanger = new Tone.Chorus(4, 2.5, 0.8).start(); // Jet Engine
+        flanger = new Tone.Chorus(4, 2.5, 0.8).start(); 
         flanger.wet.value = 0;
 
-        spaceDelay = new Tone.FeedbackDelay("8n", 0.6); // Eco
+        spaceDelay = new Tone.FeedbackDelay("8n", 0.6);
         spaceDelay.wet.value = 0;
         
-        spaceReverb = new Tone.Freeverb({ roomSize: 0.9, dampening: 2000 }); // Cattedrale di metallo
+        spaceReverb = new Tone.Freeverb({ roomSize: 0.9, dampening: 2000 });
         spaceReverb.wet.value = 0;
 
-        limiter = new Tone.Limiter(-2); // Scudo termico (anti clip)
-        meter = new Tone.Meter(); // Lettore danni scafo
+        limiter = new Tone.Limiter(-2); 
+        meter = new Tone.Meter(); 
 
-        Tone.connect(micSource, pitchShift);
-        Tone.connect(micSource, meter); 
+        // ROUTING NATIVO E SICURO
+        micSource.connect(pitchShift.input);
+        micSource.connect(meter.input);
         
         pitchShift.chain(flanger, spaceDelay, spaceReverb, limiter, Tone.Destination);
 
@@ -145,10 +150,12 @@
         video.hide();
 
       } catch (e) {
-        msg.innerHTML = "<span style='color:#ff0033;'>ERRORE LINK:</span> " + e.message;
-        btn.style.display = 'inline-block'; btn.innerText = "RE-INITIATE";
+        msg.innerHTML = "<span style='color:#ff0033;'>ERRORE SISTEMA:</span> " + e.message + "<br><br>Controlla la Developer Console (F12) per i dettagli.";
+        btn.style.display = 'inline-block'; 
+        btn.innerText = "RIPROVA";
+        console.error("Dettaglio Errore:", e);
       }
-    };
+    });
 
     window.emergencyMute = function() {
       isMuted = !isMuted;
@@ -161,55 +168,43 @@
       background(5);
       if (!isRunning) return;
 
-      // 1. Lettura sensori di emergenza (Volume RMS)
       let db = meter ? meter.getValue() : -100;
-      let isCritical = db > -8; // Soglia di allarme Larsen (oltre i -8dB inizia il caos)
-      let alertLevel = map(db, -30, -5, 0, 1, true); 
+      let isCritical = db > -8; 
 
       push();
-      translate(width, 0); scale(-1, 1); // Specchio
+      translate(width, 0); scale(-1, 1);
 
-      // Effetto Terremoto Astrale (Camera Shake)
       let shake = isCritical ? random(-20, 20) : 0;
       translate(width/2 - video.width/2 + shake, height/2 - video.height/2 + shake);
       
-      // 2. ABERRAZIONE CROMATICA (RGB Split basato sul Pitch)
       let rgbOffset = map(Math.abs(curPitch), 0, 24, 0, 25);
       
       blendMode(SCREEN);
-      // Canale Rosso (offset a sinistra)
       tint(255, 0, 0, 150);
       image(video, -rgbOffset, 0);
-      // Canale Ciano (offset a destra)
       tint(0, 255, 255, 150);
       image(video, rgbOffset, 0);
-      // Canale Base (centrale)
       tint(255, 255, 255, 180);
       image(video, 0, 0);
       blendMode(BLEND);
 
-      // 3. MASCHERA AI E GLOW DELLA BOCCA
       if (predictions.length > 0) {
         processMocap();
         drawCyberMask(isCritical);
       }
       pop();
 
-      // 4. SCANLINES (Effetto monitor CRT basato sul Flanger/Motore)
       if (curFlanger > 0.1) {
         stroke(0, 255, 255, map(curFlanger, 0, 1, 0, 50));
         strokeWeight(2);
         for(let i = 0; i < height; i += 8) { line(0, i, width, i); }
       }
 
-      // 5. ALLARME LARSEN (Redout Strobo & VU Meter)
       drawVUMeter(db, isCritical);
 
       if (isCritical) {
-        // Red Strobo Overlay
         fill(255, 0, 50, random(50, 150));
         rect(0, 0, width, height);
-        // Testo di Allarme Gigante
         fill(255);
         textAlign(CENTER, CENTER);
         textSize(4rem);
@@ -217,23 +212,19 @@
       }
     }
 
-    // --- DISEGNO VU-METER E DIAGNOSTICA VISIVA ---
     function drawVUMeter(db, isCritical) {
       let rectWidth = 300;
       let rectHeight = 20;
       let x = width/2 - rectWidth/2;
       let y = height - 60;
 
-      // Sfondo barra
       fill(20, 20, 30);
       stroke(0, 255, 255);
       strokeWeight(1);
       rect(x, y, rectWidth, rectHeight);
 
-      // Livello riempimento (da -40dB a 0dB)
       let fillWidth = map(db, -40, 0, 0, rectWidth, true);
       
-      // Colore della barra: da ciano (sicuro) a rosso fuoco (critico)
       let r = map(db, -20, -5, 0, 255, true);
       let g = map(db, -20, -5, 255, 0, true);
       let b = map(db, -20, -5, 255, 0, true);
@@ -242,7 +233,6 @@
       fill(r, g, b);
       rect(x, y, fillWidth, rectHeight);
 
-      // Testo del VU Meter
       textAlign(CENTER, BOTTOM);
       textSize(1.2rem);
       if (isCritical && frameCount % 4 < 2) {
@@ -257,7 +247,6 @@
     function drawCyberMask(isCritical) {
       const pts = predictions[0].scaledMesh;
       
-      // Colore fili neurali
       stroke(isCritical ? 255 : 0, isCritical ? 0 : 255, isCritical ? 50 : 255, 100);
       strokeWeight(1.5);
       noFill();
@@ -265,7 +254,6 @@
       for (let j = 0; j < pts.length; j++) { point(pts[j][0], pts[j][1]); }
       endShape();
 
-      // PARTICLE GLOW (Bocca Spaziale)
       if (curSpace > 0.1) {
         let topL = pts[13], botL = pts[14];
         let mouthCenter = [(topL[0]+botL[0])/2, (topL[1]+botL[1])/2];
@@ -276,30 +264,25 @@
       }
     }
 
-    // --- LOGICA DI NAVIGAZIONE E SUONO ---
     function processMocap() {
       const pts = predictions[0].scaledMesh;
       const nose = pts[1];
       const topLip = pts[13], bottomLip = pts[14];
 
-      // BOCCA = Portellone Spaziale (Riverbero + Delay)
       let mouthDist = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       let targetSpace = mouthDist > 8 ? map(mouthDist, 8, 30, 0, 1, true) : 0;
       curSpace = lerp(curSpace, targetSpace, 0.15);
       spaceDelay.wet.value = curSpace;
       spaceReverb.wet.value = curSpace;
 
-      // ASSE X = Gravità (Pitch Shift) -> Specchiato! Dx=+ Sx=-
       let noseX = nose[0] - (video.width / 2);
       let targetPitch = 0;
       if (Math.abs(noseX) > 20) {
-        // Avendo usato scale(-1,1), l'asse X visivo è invertito, quindi non moltiplichiamo per -1
         targetPitch = map(noseX, -150, 150, -24, 24, true); 
       }
       curPitch = lerp(curPitch, targetPitch, 0.1);
       pitchShift.pitch = curPitch;
 
-      // ASSE Y = Propulsori (Flanger)
       let noseY = nose[1] - (video.height / 2);
       let targetFlanger = Math.abs(noseY) > 20 ? map(Math.abs(noseY), 20, 150, 0, 1, true) : 0;
       curFlanger = lerp(curFlanger, targetFlanger, 0.1);
