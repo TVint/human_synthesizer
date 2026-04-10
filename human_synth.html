@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>Sintetizzatore Umano - v0.1</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+  
+  <style>
+    body { 
+      margin: 0; padding: 0; background-color: #050505; color: #0f0; 
+      font-family: 'Courier New', Courier, monospace; overflow: hidden; 
+    }
+    
+    /* Il bottone di avvio (necessario per sbloccare l'audio nei browser) */
+    #start-btn { 
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+      padding: 20px; font-size: 1.2rem; background: transparent; color: #0f0; 
+      border: 2px solid #0f0; cursor: pointer; z-index: 200; transition: all 0.3s;
+    }
+    #start-btn:hover { background: #0f0; color: #000; }
+
+    /* DEV PANEL HUD */
+    #dev-panel { 
+      position: absolute; top: 20px; right: 20px; background: rgba(0, 0, 0, 0.85); 
+      padding: 15px; border: 1px solid #333; z-index: 100; font-size: 0.9rem;
+      backdrop-filter: blur(5px);
+    }
+    #dev-panel h3 { margin-top: 0; color: #fff; border-bottom: 1px solid #333; padding-bottom: 5px;}
+    .control-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; color: #aaa; }
+    input[type=range] { width: 100%; cursor: pointer; }
+    .debug-info { color: #ff00ff; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <button id="start-btn">[ INIZIALIZZA PORTALE ]</button>
+
+  <div id="dev-panel" style="display: none;">
+    <h3>DEV PANEL // TWEAKING</h3>
+    
+    <div class="control-group">
+      <label>Oscillator Freq (Hz): <span id="oscFreqLabel">130</span></label>
+      <input type="range" id="oscFreq" min="50" max="300" value="130">
+    </div>
+
+    <div class="control-group">
+      <label>Mouth Sensitivity:</label>
+      <input type="range" id="mouthSens" min="10" max="150" value="60">
+    </div>
+
+    <div class="debug-info">
+      <div id="mouthOpenVal">Mouth Dist: 0</div>
+      <div id="filterCutoffVal">Filter Cutoff: 0 Hz</div>
+    </div>
+  </div>
+
+  <script>
+    // --- VARIABILI GLOBALI ---
+    let video;
+    let facemesh;
+    let predictions = [];
+
+    // --- AUDIO NODES (Tone.js) ---
+    let isAudioStarted = false;
+    let synth;
+    let filter;
+
+    // --- SETUP P5.JS ---
+    function setup() {
+      createCanvas(windowWidth, windowHeight);
+      select('#start-btn').mousePressed(initSystem);
+      
+      // Listener per aggiornare le label del dev panel
+      select('#oscFreq').input(() => select('#oscFreqLabel').html(select('#oscFreq').value()));
+    }
+
+    // --- INIZIALIZZAZIONE SISTEMA ---
+    async function initSystem() {
+      // 1. Sblocca l'AudioContext del browser (Obbligatorio)
+      await Tone.start();
+      isAudioStarted = true;
+
+      // 2. Crea il routing audio: Synth -> Filter -> Casse
+      filter = new Tone.Filter(200, "lowpass").toDestination();
+      
+      synth = new Tone.Synth({
+        oscillator: { type: "sawtooth" }, // Suono "ronzante" ed elettronico
+        envelope: { attack: 0.1, decay: 0.2, sustain: 1.0, release: 0.5 }
+      }).connect(filter);
+
+      // Inizia a suonare una nota continua a volume bassissimo
+      synth.volume.value = -10; 
+      synth.triggerAttack(select('#oscFreq').value());
+
+      // 3. Nascondi onboarding, mostra Dev Panel
+      select('#start-btn').hide();
+      select('#dev-panel').style('display', 'block');
+
+      // 4. Inizializza Webcam
+      video = createCapture(VIDEO);
+      video.size(640, 480);
+      video.hide(); // Nascondiamo l'elemento DOM, lo disegneremo in draw()
+
+      // 5. Carica FaceMesh
+      facemesh = ml5.facemesh(video, () => console.log("FaceMesh Pronto!"));
+      facemesh.on("predict", results => { predictions = results; });
+    }
+
+    // --- LOOP PRINCIPALE ---
+    function draw() {
+      background(10); // Sfondo quasi nero
+
+      if (!isAudioStarted || !video) return;
+
+      // Centra il video nello schermo
+      push();
+      translate(width/2 - video.width/2, height/2 - video.height/2);
+      
+      // Disegna il video con opacità ridotta per un effetto "spettro"
+      tint(255, 50); 
+      image(video, 0, 0);
+
+      if (predictions.length > 0) {
+        drawTechMask();
+        processBiometrics();
+      }
+      pop();
+      
+      // Aggiorna frequenza base dal Dev Panel
+      if(synth) synth.setNote(select('#oscFreq').value());
+    }
+
+    // --- LA MASCHERA GRAFICA ---
+    function drawTechMask() {
+      const keypoints = predictions[0].scaledMesh;
+      
+      stroke(0, 255, 0, 150); // Verde Matrix
+      strokeWeight(1);
+      fill(0, 255, 0, 30);
+
+      // Disegna i punti base (stile Constraint Systems)
+      for (let j = 0; j < keypoints.length; j++) {
+        let [x, y] = keypoints[j];
+        point(x, y);
+      }
+    }
+
+    // --- IL MOTORE: VISO -> AUDIO ---
+    function processBiometrics() {
+      const keypoints = predictions[0].scaledMesh;
+
+      // PUNTO 13 (Labbro superiore interno), PUNTO 14 (Labbro inferiore interno)
+      const topLip = keypoints[13];
+      const bottomLip = keypoints[14];
+
+      // Calcola quanto è aperta la bocca
+      let mouthDistance = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
+      
+      // Scrivi nel Dev Panel
+      select('#mouthOpenVal').html(`Mouth Dist: ${mouthDistance.toFixed(2)}`);
+
+      // Ottieni la sensibilità dal Dev Panel
+      let sensitivity = parseFloat(select('#mouthSens').value());
+
+      // LA MAGIA AUDIO:
+      // Mappa l'apertura della bocca al taglio del filtro (da 200Hz a X Hz)
+      let targetCutoff = 200 + (mouthDistance * sensitivity * 10);
+      
+      // Limita la frequenza per non distruggere le orecchie (max 8000 Hz)
+      targetCutoff = constrain(targetCutoff, 200, 8000);
+
+      // Cambia la frequenza del filtro in modo fluido per evitare "click"
+      filter.frequency.rampTo(targetCutoff, 0.05);
+
+      // Aggiorna Debug
+      select('#filterCutoffVal').html(`Filter Cutoff: ${targetCutoff.toFixed(0)} Hz`);
+    }
+
+    // Adatta il canvas se la finestra viene ridimensionata
+    function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+  </script>
+</body>
+</html>
