@@ -50,11 +50,11 @@
   <div id="ui-container">
     <h1>VOID RIDER // LINK.START()</h1>
     <div id="status-msg">
-      <b>SISTEMA HUD NEURALE V2.2 // GAIN STAGING</b><br><br>
-      > Sensibilità Y: AUMENTATA (Jet Response)<br>
-      > Limitatore Larsen: CALIBRATO (-12dB Master)<br>
-      > Space Engine: PRONTO (Labbra = Trigger)<br>
-      <span style="color:#ff0033">> WARNING: Feedback quantico sotto controllo.</span>
+      <b>SISTEMA HUD NEURALE V2.3 // ACOUSTIC ARMOR</b><br><br>
+      > Noise Gate: ATTIVO (Filtro rumore di fondo)<br>
+      > High-Cut EQ: ATTIVO (Prevenzione fischi)<br>
+      > Jet Flanger: CALIBRATO (0.2Hz Slow Sweep)<br>
+      <span style="color:#ff0033">> WARNING: Feedback loop controllato e isolato.</span>
     </div>
     <button class="btn" id="action-btn">ESTABLISH NEURAL LINK</button>
   </div>
@@ -63,7 +63,7 @@
 
   <script>
     let video, facemesh, predictions = [];
-    let pitchShift, chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, meter;
+    let noiseGate, eq, pitchShift, chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, meter;
     
     let curPitch = 0, curPitchWet = 0;
     let curSpace = 0, curFlanger = 0;
@@ -87,7 +87,13 @@
         await Tone.start();
         const micSource = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        // --- MOTORE AUDIO RICALIBRATO ---
+        // --- MOTORE AUDIO: SCUDO ANTI-LARSEN ---
+        // 1. Il Gate chiude il microfono se il suono ambientale scende sotto i -40dB
+        noiseGate = new Tone.Gate(-40, 0.1);
+        
+        // 2. L'EQ taglia le frequenze altissime che generano i fischi spontanei
+        eq = new Tone.EQ3(0, 0, -10);
+
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.05; 
         pitchShift.wet.value = 0; 
@@ -95,27 +101,35 @@
         chebyshev = new Tone.Chebyshev(50);
         chebyshev.wet.value = 0; 
 
+        // 3. VERO JET FLANGER: Onda lenta (0.2Hz), delay brevissimo (2ms)
         flangerEffect = new Tone.Chorus({
-          frequency: 15, delayTime: 3.5, depth: 0.9, 
-          feedback: 0.85, // ABBASSATO per evitare innesco infinito autonomo
-          spread: 180
+          frequency: 0.2, 
+          delayTime: 2, 
+          depth: 1, 
+          feedback: 0.85, 
+          spread: 180,
+          type: "triangle"
         }).start();
         flangerEffect.wet.value = 0;
 
-        spaceDelay = new Tone.FeedbackDelay("16n", 0.6); // Feedback delay ridotto
+        spaceDelay = new Tone.FeedbackDelay("16n", 0.6); 
         spaceDelay.wet.value = 0;
         
         spaceReverb = new Tone.Freeverb({ roomSize: 0.85, dampening: 1500 });
         spaceReverb.wet.value = 0;
 
-        // IL SEGRETO: Master Volume a -12 decibel taglia l'energia acustica del ritorno
-        masterVol = new Tone.Volume(-12);
+        // Master Volume protettivo
+        masterVol = new Tone.Volume(-15);
         limiter = new Tone.Limiter(-1);
         meter = new Tone.Meter();
 
-        Tone.connect(micSource, pitchShift);
-        Tone.connect(micSource, meter);
-        // Catena: Pitch -> Chebyshev -> Flanger -> Delay -> Reverb -> MASTER VOL -> Limiter
+        // --- ROUTING BLINDATO ---
+        Tone.connect(micSource, noiseGate);
+        noiseGate.connect(eq);
+        eq.connect(meter); // Il meter legge solo l'audio che passa il cancello
+        eq.connect(pitchShift);
+
+        // Catena Effetti
         pitchShift.chain(chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, Tone.Destination);
 
         video = createCapture(VIDEO, () => {
@@ -134,9 +148,9 @@
       background(3, 5, 10);
       if (!isRunning) return;
 
-      // Ricalibrazione della dinamica del volume (-45 a -5 dB)
+      // Ricalibrazione dinamica visiva: ignora tutto ciò che è sotto i -25dB
       let db = meter.getValue();
-      let vol = map(db, -45, -5, 0, 1, true);
+      let vol = map(db, -25, -2, 0, 1, true);
 
       // --- LOGICA MAPPING BIOMETRICA ---
       if (predictions.length > 0) {
@@ -144,14 +158,14 @@
         let nose = pts[1];
         let topL = pts[13], botL = pts[14];
 
-        // 1. BOCCA (Sensibilità ottimizzata e cap a 85% per sicurezza Larsen)
+        // BOCCA
         let mDist = dist(topL[0], topL[1], botL[0], botL[1]);
         let targetSpace = mDist > 12 ? map(mDist, 12, 35, 0, 0.85, true) : 0;
         curSpace = lerp(curSpace, targetSpace, 0.15); 
         spaceDelay.wet.value = curSpace;
         spaceReverb.wet.value = curSpace;
 
-        // 2. TESTA X (Pitch Shift)
+        // TESTA X
         headX = (video.width/2) - nose[0]; 
         let tPitch = 0, tPitchWet = 0;
         if (Math.abs(headX) > 25) {
@@ -164,7 +178,7 @@
         pitchShift.pitch = curPitch;
         pitchShift.wet.value = curPitchWet;
 
-        // 3. TESTA Y (Jet Flanger rapido)
+        // TESTA Y (Jet Flanger rapido)
         headY = (video.height/2) - nose[1];
         let tFlange = headY > 15 ? map(headY, 15, 90, 0, 1, true) : 0;
         curFlanger = lerp(curFlanger, tFlange, 0.2); 
@@ -179,7 +193,7 @@
       push();
       translate(width, 0); scale(-1, 1);
       
-      // Allarme Viscerale triggerato solo oltre l'85% del volume ricalibrato
+      // Allarme Viscerale
       let shake = vol > 0.85 ? random(-20, 20) : 0;
       translate(width/2 - video.width/2 + shake, height/2 - video.height/2 + shake);
       
@@ -248,7 +262,9 @@
       text(`> SYS.TEMP: ${map(vol, 0, 1, 100, 950).toFixed(0)} K`, xR, yR+60);
 
       textAlign(RIGHT); fill(0, 255, 255, 80); textSize(11);
-      text(`SEC_TRACTOR_BEAM_STAT: [${db.toFixed(1)}db]\n`+
+      // Il valore del dB crudo non andrà sotto i -40 visivamente
+      let dispDb = Math.max(db, -40);
+      text(`SEC_TRACTOR_BEAM_STAT: [${dispDb.toFixed(1)}db]\n`+
            `ASTRO_NAV_LINK: [ACTIVE]\n`+
            `HULL_PLATING_LOAD: [${(vol*100).toFixed(1)}%]\n`+
            `SYS.ERROR_LOG: [CLEAR]\n`, width-20, height-150);
