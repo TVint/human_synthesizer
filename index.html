@@ -221,7 +221,7 @@
       pitchShift.pitch = curPitch;
 
       // ASSE Y = Flanger (Solo quando si guarda in ALTO)
-      let targetFlanger = headOffsetY > 10 ? map(headOffsetY, 10, 120, 0, 1, true) : 0;
+      let targetFlanger = headOffsetY > 10 ? map(headOffsetY, 5, 120, 0, 1, true) : 0;
       curFlanger = lerp(curFlanger, targetFlanger, 0.2); 
       flanger.wet.value = curFlanger;
       }
