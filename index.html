@@ -9,7 +9,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   
   <style>
-    /* --- STILE UI AGGIORNATO (Cyberpunk / Glassmorphism) --- */
     @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&display=swap');
 
     body { 
@@ -75,7 +74,7 @@
     <h1>SYS.ERROR</h1>
     <div id="status-msg">
       <span style="color: #ff2a5f;"><b>ATTENZIONE:</b></span> Il volume verrà settato al 50% in modalità sicurezza.<br><br>
-      Cliccando il pulsante autorizzi l'attivazione dei sensori ambientali (A/V).
+      Cliccando il pulsante autorizzi l'attivazione dei sensori (A/V).
     </div>
     <button class="btn" id="action-btn" onclick="window.igniteSystem()">IGNITE SYSTEM</button>
   </div>
@@ -93,7 +92,7 @@
 
   <script>
     let video, facemesh, predictions = [];
-    let mic, pitchShift, flanger, feedbackDelay, limiter, meter, masterVol;
+    let pitchShift, flanger, feedbackDelay, limiter, meter, masterVol;
     
     let curPitch = 0, curDelay = 0, curFlanger = 0;
     let isMuted = false;
@@ -105,7 +104,6 @@
       canvas.style('z-index', '-1');
     }
 
-    // --- AVVIO SINGOLO E SICURO ---
     window.igniteSystem = async function() {
       const msg = document.getElementById('status-msg');
       const btn = document.getElementById('action-btn');
@@ -114,14 +112,18 @@
       msg.innerHTML = "<span style='color:#00ffff; font-weight:bold; font-size: 1.4rem;'>ATTESA AUTORIZZAZIONE...</span><br><br>Consenti l'accesso dal popup del browser.";
       
       try {
-        // 1. Richiesta nativa di entrambi i permessi insieme
-        await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        // 1. Chiediamo flusso A/V ignorando i filtri di pulizia chiamate
+        const stream = await navigator.mediaDevices.getUserMedia({ 
+          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false }, 
+          video: true 
+        });
         
         msg.innerHTML = "<span style='color:#fff;'>Inizializzazione Motore Audio...</span>";
         await Tone.start();
         
-        // 2. SETUP NODI AUDIO
-        mic = new Tone.UserMedia();
+        // 2. BYPASS DI TONE.USERMEDIA (Iniezione Diretta Cavo Virtuale)
+        const audioContext = Tone.getContext().rawContext;
+        const micSource = audioContext.createMediaStreamSource(stream);
         
         pitchShift = new Tone.PitchShift(0);
         pitchShift.windowSize = 0.05;
@@ -132,20 +134,19 @@
         feedbackDelay = new Tone.FeedbackDelay("16n", 0.95);
         feedbackDelay.wet.value = 0;
 
-        masterVol = new Tone.Volume(-6); // Volume limitato
+        masterVol = new Tone.Volume(-6);
         limiter = new Tone.Limiter(-1);
         meter = new Tone.Meter();
 
-        // 3. FIX ERRORE: Usiamo il comando nativo corretto open() per accendere il mic
-        await mic.open(); 
+        // ROUTING NATIVO
+        Tone.connect(micSource, pitchShift);
+        Tone.connect(micSource, meter); // Misuratore di volume grafico
         
-        // Routing
-        mic.chain(pitchShift, flanger, feedbackDelay, masterVol, limiter, Tone.Destination);
-        mic.connect(meter);
+        pitchShift.chain(flanger, feedbackDelay, masterVol, limiter, Tone.Destination);
 
         msg.innerHTML = "<span style='color:#ff2a5f;'>Caricamento Rete Neurale (AI)...</span>";
 
-        // 4. SETUP VIDEO E FACEMESH
+        // 3. SETUP VIDEO
         video = createCapture(VIDEO, () => {
           facemesh = ml5.facemesh(video, () => {
             isRunning = true;
@@ -158,10 +159,10 @@
         video.hide();
 
       } catch (e) {
-        msg.innerHTML = "<span style='color:#ff2a5f; font-weight:bold;'>ERRORE:</span> " + e.name + "<br>Accesso negato. Controlla le impostazioni del browser.";
+        msg.innerHTML = "<span style='color:#ff2a5f; font-weight:bold;'>ERRORE SISTEMA:</span><br>" + e.message;
         btn.style.display = 'inline-block';
         btn.innerText = "RIPROVA";
-        console.error("Errore di inizializzazione:", e);
+        console.error("Dettaglio:", e);
       }
     };
 
@@ -209,7 +210,6 @@
       }
       pop();
 
-      // UI dinamica in base al rumore
       if (volNorm > 0.8) {
         document.getElementById('warning').style.display = 'block';
         document.getElementById('hud').classList.add('glitch-active');
@@ -243,21 +243,21 @@
       const pts = predictions[0].scaledMesh;
       const nose = pts[1];
 
-      // BOCCA = Delay Feedback
+      // BOCCA
       const topLip = pts[13], bottomLip = pts[14];
       let mouthDist = dist(topLip[0], topLip[1], bottomLip[0], bottomLip[1]);
       let targetDelay = mouthDist > 10 ? map(mouthDist, 10, 50, 0, 1, true) : 0;
       curDelay = lerp(curDelay, targetDelay, 0.1);
       feedbackDelay.wet.rampTo(curDelay, 0.1);
 
-      // ASSE X = Pitch Mutation (+/- 24)
+      // ASSE X
       let noseX = nose[0] - (video.width / 2);
       let targetPitch = 0;
       if (Math.abs(noseX) > 30) targetPitch = map(noseX, -150, 150, -24, 24, true) * -1;
       curPitch = lerp(curPitch, targetPitch, 0.1);
       pitchShift.pitch = curPitch;
 
-      // ASSE Y = Flanger
+      // ASSE Y
       let noseY = nose[1] - (video.height / 2);
       let targetFlanger = 0;
       if (Math.abs(noseY) > 30) targetFlanger = map(Math.abs(noseY), 30, 150, 0, 1, true); 
