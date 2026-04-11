@@ -2,8 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>VOID RIDER // TACTICAL HUD FINAL</title>
+  <title>VOID RIDER // VR COMMAND CENTER</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -13,153 +12,192 @@
     @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
 
     body { 
-      margin: 0; padding: 0; background-color: #020205; color: #00ffff; 
+      margin: 0; padding: 0; background-color: #010103; color: #00ffff; 
       font-family: 'Share Tech Mono', monospace; overflow: hidden; 
     }
-
-    /* BANNER OBBLIGATORIO ROTAZIONE (Appare solo su mobile in verticale) */
-    #rotate-banner {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(2, 2, 5, 0.98); z-index: 9999; flex-direction: column; 
-      justify-content: center; align-items: center; text-align: center; padding: 20px;
-    }
-    #rotate-banner h1 { border: none; font-size: 2rem; color: #ff0033; text-shadow: 0 0 20px #ff0033; }
-    #rotate-banner p { font-size: 1.2rem; color: #00ffff; }
-    @media screen and (orientation: portrait) { #rotate-banner { display: flex; } }
     
+    /* --- BOOT UI --- */
     #ui-container {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(2, 5, 15, 0.95); border: 1px solid #00ffff; 
-      padding: 40px; text-align: center; z-index: 200; width: 90%; max-width: 550px;
-      backdrop-filter: blur(10px);
-      box-shadow: 0 0 40px rgba(0, 255, 255, 0.2);
+      padding: 40px; text-align: center; z-index: 9999; width: 600px;
+      backdrop-filter: blur(10px); box-shadow: 0 0 50px rgba(0, 255, 255, 0.3);
       clip-path: polygon(0 20px, 20px 0, 100% 0, 100% calc(100% - 20px), calc(100% - 20px) 100%, 0 100%);
     }
-    
-    h1 { margin: 0 0 20px 0; font-size: 2.2rem; letter-spacing: 4px; border-bottom: 1px solid #00ffff; padding-bottom: 10px; }
-    #status-msg { margin-bottom: 25px; color: #88ccaa; font-size: 0.9rem; line-height: 1.6; }
-    
+    h1 { margin: 0 0 20px 0; font-size: 2.5rem; letter-spacing: 5px; border-bottom: 2px solid #00ffff; padding-bottom: 10px; text-shadow: 0 0 15px #00ffff; }
+    #status-msg { margin-bottom: 25px; color: #88ccaa; font-size: 1.1rem; line-height: 1.6; }
     .btn {
       display: inline-block; padding: 15px 40px; margin-top: 15px; font-size: 1.2rem;
       background: rgba(0, 255, 255, 0.1); color: #00ffff; border: 1px solid #00ffff;
       cursor: pointer; text-transform: uppercase; font-weight: bold; 
-      border-radius: 3px; letter-spacing: 2px; transition: all 0.3s;
-      position: relative; z-index: 1000;
+      letter-spacing: 2px; transition: all 0.3s;
     }
-    .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 15px #00ffff; }
+    .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 25px #00ffff; }
 
+    /* --- EMERGENCY KILL SWITCH --- */
     #panic {
-      position: absolute; top: 20px; right: 20px; z-index: 300; display: none;
+      position: absolute; top: 20px; right: 20px; z-index: 5000; display: none;
       background: rgba(255, 0, 50, 0.2); color: #ff0032; border: 1px solid #ff0032;
-      padding: 10px 20px; cursor: pointer; text-transform: uppercase; font-size: 0.8rem;
+      padding: 15px 30px; cursor: pointer; text-transform: uppercase; font-weight: bold; font-size: 1rem;
     }
-    #panic:hover { background: #ff0032; color: #000; box-shadow: 0 0 15px #ff0032;}
+    #panic:hover { background: #ff0032; color: #000; box-shadow: 0 0 20px #ff0032;}
+
+    /* --- HOTSPOTS (Cliccabili per i Tutorial) --- */
+    .hotspot {
+      position: absolute; background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
+      z-index: 1000; display: none; cursor: pointer; transition: 0.3s;
+      display: flex; justify-content: center; align-items: center; text-align: center; color: rgba(0,255,255,0.5); font-weight: bold; font-size: 1.2rem;
+    }
+    .hotspot:hover { background: rgba(0, 255, 255, 0.2); border: 1px solid #00ffff; color: #00ffff; text-shadow: 0 0 10px #00ffff; box-shadow: inset 0 0 20px rgba(0,255,255,0.5); }
+    
+    #hs-top { top: 0; left: 20%; width: 60%; height: 80px; }
+    #hs-bottom { bottom: 0; left: 20%; width: 60%; height: 80px; }
+    #hs-left { top: 10%; left: 0; width: 120px; height: 80%; }
+    #hs-right { top: 10%; right: 0; width: 120px; height: 80%; }
+
+    /* --- TUTORIAL MODAL --- */
+    #tutorial-modal {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.9); border: 2px solid #00ffff; box-shadow: 0 0 50px #00ffff;
+      padding: 40px; z-index: 9000; display: none; width: 500px; text-align: center;
+    }
+    #tut-title { font-size: 2rem; color: #fff; margin-bottom: 20px; text-shadow: 0 0 10px #00ffff;}
+    #tut-desc { font-size: 1.2rem; color: #88ccaa; line-height: 1.6; margin-bottom: 30px;}
+    .close-tut { padding: 10px 20px; background: #00ffff; color: #000; cursor: pointer; font-weight: bold; border: none; font-size: 1.2rem; font-family: 'Share Tech Mono';}
+
   </style>
 </head>
 <body>
 
-  <div id="rotate-banner">
-    <h1>⚠ SYSTEM OVERRIDE ⚠</h1>
-    <p>Orientamento Landscape richiesto per l'HUD Tattico.<br>Ruota il dispositivo per procedere.</p>
+  <div id="ui-container">
+    <h1>VOID RIDER // VR COCKPIT</h1>
+    <div id="status-msg">
+      <b>SISTEMA HUD NEURALE V3.0 (DESKTOP IMMERSION)</b><br><br>
+      > Casco Neurale: ONLINE<br>
+      > Proiettore Olografico Audio: ONLINE<br>
+      > Motore Warp Starfield: ONLINE<br>
+      <br>
+      <span style="color:#ff0033">> WARNING: Esperienza sensoriale intensa. Clicca sui bordi dello schermo per accedere ai tutorial di volo.</span>
+    </div>
+    <button class="btn" id="action-btn">ESTABLISH FULL LINK</button>
   </div>
 
-  <div id="ui-container">
-    <h1>VOID RIDER // LINK.START()</h1>
-    <div id="status-msg">
-      <b>SISTEMA HUD NEURALE V2.4 // FULL DESKTOP & MOBILE INTEGRATION</b><br><br>
-      > Noise Gate: ATTIVO (Filtro rumore di fondo)<br>
-      > High-Cut EQ: ATTIVO (Prevenzione fischi)<br>
-      > Jet Flanger: CALIBRATO (0.2Hz Slow Sweep)<br>
-      <span style="color:#ff0033">> WARNING: Feedback loop controllato e isolato.</span>
-    </div>
-    <button class="btn" id="action-btn">ESTABLISH NEURAL LINK</button>
+  <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[FLANGER]</div>
+  <div id="hs-bottom" class="hotspot" onclick="showTutorial('DOWN')">[BITCRUSHER]</div>
+  <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">[RING MOD]</div>
+  <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')">[PITCH UP]</div>
+
+  <div id="tutorial-modal">
+    <div id="tut-title">TITOLO</div>
+    <div id="tut-desc">Descrizione...</div>
+    <button class="close-tut" onclick="document.getElementById('tutorial-modal').style.display='none'">[ CHIUDI E TORNA AL VOLO ]</button>
   </div>
 
   <button id="panic" onclick="window.emergencyMute()">TAGLIO MOTORI</button>
 
   <script>
+    // --- VARIABILI GLOBALI ---
     let video, facemesh, predictions = [];
-    let noiseGate, eq, pitchShift, chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, meter;
+    let noiseGate, eq, pitchShift, ringMod, flanger, bitcrusher, spaceDelay, spaceReverb, masterVol, limiter, meter, analyzer;
     
-    let curPitch = 0, curPitchWet = 0;
-    let curSpace = 0, curFlanger = 0;
-    let headX = 0, headY = 0;
+    // Valori correnti (Lerp)
+    let cPitch = 0, cRing = 0, cFlange = 0, cBit = 0, cSpace = 0;
     let isRunning = false;
+    let stars = []; // Per l'effetto Starfield Warp
 
+    // --- SETUP P5.JS ---
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
-      canvas.position(0, 0);
-      canvas.style('z-index', '-1'); 
-      canvas.style('pointer-events', 'none'); 
+      canvas.position(0, 0); canvas.style('z-index', '-1'); 
+      
+      // Crea le stelle iniziali
+      for (let i = 0; i < 200; i++) {
+        stars.push({ x: random(-width, width), y: random(-height, height), z: random(width) });
+      }
     }
 
+    // --- INITIALIZATION ---
     document.getElementById('action-btn').addEventListener('click', async () => {
       document.getElementById('action-btn').style.display = 'none';
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: { echoCancellation: false, noiseSuppression: false }, video: true 
-        });
-        
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false }, video: true });
         await Tone.start();
         const micSource = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        // --- MOTORE AUDIO V2.3 RIPRISTINATO ---
+        // --- MOTORE AUDIO 5D ---
         noiseGate = new Tone.Gate(-40, 0.1);
         eq = new Tone.EQ3(0, 0, -10);
-
-        pitchShift = new Tone.PitchShift(0);
-        pitchShift.windowSize = 0.05; 
-        pitchShift.wet.value = 0; 
-
-        chebyshev = new Tone.Chebyshev(50);
-        chebyshev.wet.value = 0; 
-
-        flangerEffect = new Tone.Chorus({
-          frequency: 0.2, 
-          delayTime: 2, 
-          depth: 1, 
-          feedback: 0.85, 
-          spread: 180,
-          type: "triangle"
-        }).start();
-        flangerEffect.wet.value = 0;
-
-        spaceDelay = new Tone.FeedbackDelay("16n", 0.6); 
-        spaceDelay.wet.value = 0;
-        
-        spaceReverb = new Tone.Freeverb({ roomSize: 0.85, dampening: 1500 });
-        spaceReverb.wet.value = 0;
-
-        masterVol = new Tone.Volume(-15);
-        limiter = new Tone.Limiter(-1);
+        analyzer = new Tone.Waveform(256); // Proiettore Olografico
         meter = new Tone.Meter();
 
-        // --- ROUTING BLINDATO ---
+        // 1. Pitch Up (Testa Destra)
+        pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0; 
+        
+        // 2. Ring Modulator (Testa Sinistra) - Creato con FrequencyShifter a 200Hz
+        ringMod = new Tone.FrequencyShifter(200); ringMod.wet.value = 0;
+
+        // 3. Flanger / Jet (Testa Su)
+        let cheb = new Tone.Chebyshev(50);
+        let chor = new Tone.Chorus({ frequency: 0.2, delayTime: 2, depth: 1, feedback: 0.85, spread: 180 }).start();
+        flanger = new Tone.Gain(1); // Usato come contenitore wet
+        chor.wet.value = 0; cheb.wet.value = 0;
+
+        // 4. Bitcrusher / Glitch (Testa Giù)
+        bitcrusher = new Tone.BitCrusher(4); bitcrusher.wet.value = 0;
+
+        // 5. Space Reverb (Bocca)
+        spaceDelay = new Tone.FeedbackDelay("16n", 0.6); spaceDelay.wet.value = 0;
+        spaceReverb = new Tone.Freeverb({ roomSize: 0.85, dampening: 1500 }); spaceReverb.wet.value = 0;
+
+        // Protezioni
+        masterVol = new Tone.Volume(-15); limiter = new Tone.Limiter(-1);
+
+        // Routing
         Tone.connect(micSource, noiseGate);
-        noiseGate.connect(eq);
-        eq.connect(meter); 
-        eq.connect(pitchShift);
+        noiseGate.chain(eq, analyzer, meter, pitchShift);
+        pitchShift.chain(ringMod, bitcrusher, cheb, chor, spaceDelay, spaceReverb, masterVol, limiter, Tone.Destination);
 
-        pitchShift.chain(chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, Tone.Destination);
-
+        // --- VIDEO ENGINE ---
         video = createCapture(VIDEO, () => {
           facemesh = ml5.facemesh(video, () => {
             isRunning = true;
             document.getElementById('ui-container').style.display = 'none';
             document.getElementById('panic').style.display = 'block';
+            
+            // Attiva gli hotspot
+            document.querySelectorAll('.hotspot').forEach(el => el.style.display = 'flex');
           });
           facemesh.on("predict", r => predictions = r);
         });
         video.hide();
-      } catch (e) { 
-        document.getElementById('status-msg').innerHTML = "<span style='color:#ff0033;'>ERRORE:</span> " + e.message;
-        document.getElementById('action-btn').style.display = 'inline-block';
-        document.getElementById('action-btn').innerText = 'RIPROVA';
-      }
+      } catch (e) { alert("Errore inizializzazione: " + e.message); }
     });
 
+    // --- GESTIONE TUTORIAL ---
+    window.showTutorial = function(type) {
+      const modal = document.getElementById('tutorial-modal');
+      const title = document.getElementById('tut-title');
+      const desc = document.getElementById('tut-desc');
+      
+      if(type === 'LEFT') {
+        title.innerText = "MODULATORE AD ANELLO";
+        desc.innerText = "Spostati verso SINISTRA.\nQuesto attiva un MODULATORE AD ANELLO. Modificherà il tuo suono creando sfumature metalliche e aliene. Visivamente, il sistema perderà l'orientamento spaziale.";
+      } else if(type === 'RIGHT') {
+        title.innerText = "PITCH UP (GRAVITÀ ZERO)";
+        desc.innerText = "Spostati verso DESTRA.\nQuesto alza il PITCH della tua voce in modo estremo, come se ti trovassi in una zona a bassa gravità spaziale.";
+      } else if(type === 'UP') {
+        title.innerText = "FLANGER (PROPULSORI)";
+        desc.innerText = "Spostati verso l'ALTO.\nQuesto attiva il FLANGER RISONANTE. È come accendere i propulsori a ioni della navicella. Sentirai un potente fruscio metallico e le stelle accelereranno.";
+      } else if(type === 'DOWN') {
+        title.innerText = "BITCRUSHER (CORRUZIONE DATI)";
+        desc.innerText = "Spostati verso il BASSO.\nQuesto attiva un BITCRUSHER a 4-bit. Frammenterà il segnale audio creando distorsioni digitali e glitch. Lo schermo si pixelizzerà.";
+      }
+      modal.style.display = 'block';
+    }
+
+    // --- LOOP PRINCIPALE GRAFICO ---
     function draw() {
-      background(3, 5, 10);
+      background(0, 2, 8); // Deep space
       if (!isRunning) return;
 
       let db = meter.getValue();
@@ -171,145 +209,207 @@
         let nose = pts[1];
         let topL = pts[13], botL = pts[14];
 
-        // BOCCA
+        // Normalizzazione Vettori della testa rispetto al centro del video
+        // Valori da -1 (Sinistra/Alto) a +1 (Destra/Basso)
+        // Nota: Webcam specchiata -> Se io vado a Destra, sul canvas vado a Sinistra.
+        let nX = (nose[0] - video.width/2) / (video.width/2); 
+        let nY = (nose[1] - video.height/2) / (video.height/2);
+
+        // BOCCA (Z)
         let mDist = dist(topL[0], topL[1], botL[0], botL[1]);
-        let targetSpace = mDist > 12 ? map(mDist, 12, 35, 0, 0.85, true) : 0;
-        curSpace = lerp(curSpace, targetSpace, 0.15); 
-        spaceDelay.wet.value = curSpace;
-        spaceReverb.wet.value = curSpace;
+        cSpace = lerp(cSpace, mDist > 12 ? map(mDist, 12, 35, 0, 0.85, true) : 0, 0.15);
+        spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
 
-        // TESTA X
-        headX = (video.width/2) - nose[0]; 
-        let tPitch = 0, tPitchWet = 0;
-        if (Math.abs(headX) > 25) {
-          tPitch = map(headX, -150, 150, -24, 24, true);
-          tPitchWet = map(Math.abs(headX), 25, 60, 0, 1, true); 
+        // X: DESTRA E SINISTRA
+        let tPitch = 0, tPitchWet = 0, tRing = 0;
+        if (nX < -0.15) { // User moved Right (Pitch Up)
+          tPitch = map(nX, -0.15, -0.8, 0, 24, true);
+          tPitchWet = map(nX, -0.15, -0.4, 0, 1, true);
+        } else if (nX > 0.15) { // User moved Left (Ring Modulator)
+          tRing = map(nX, 0.15, 0.8, 0, 1, true);
         }
-        curPitch = lerp(curPitch, tPitch, 0.15);
-        curPitchWet = lerp(curPitchWet, tPitchWet, 0.15);
+        cPitch = lerp(cPitch, tPitch, 0.15);
+        pitchShift.pitch = cPitch;
+        pitchShift.wet.value = lerp(pitchShift.wet.value, tPitchWet, 0.15);
         
-        pitchShift.pitch = curPitch;
-        pitchShift.wet.value = curPitchWet;
+        cRing = lerp(cRing, tRing, 0.15);
+        ringMod.wet.value = cRing;
 
-        // TESTA Y
-        headY = (video.height/2) - nose[1];
-        let tFlange = headY > 15 ? map(headY, 15, 90, 0, 1, true) : 0;
-        curFlanger = lerp(curFlanger, tFlange, 0.2); 
+        // Y: ALTO E BASSO
+        let tFlange = 0, tBit = 0;
+        if (nY < -0.1) { // User moved UP (Flanger)
+          tFlange = map(nY, -0.1, -0.8, 0, 1, true);
+        } else if (nY > 0.15) { // User moved DOWN (Bitcrusher)
+          tBit = map(nY, 0.15, 0.8, 0, 1, true);
+        }
+        cFlange = lerp(cFlange, tFlange, 0.2);
+        flanger.wet.value = cFlange; // Simbolico per grafica
+        Tone.getContext().rawContext.destination // L'oggetto Chorus effettivo (gestito con scorciatoie prima)
         
-        chebyshev.wet.value = curFlanger;
-        flangerEffect.wet.value = curFlanger;
+        cBit = lerp(cBit, tBit, 0.2);
+        bitcrusher.wet.value = cBit;
       }
 
-      // --- RENDER HUD (Grafica "Figa" Ripristinata) ---
-      drawBackgroundGrid();
-      
+      // --- DYNAMIC STARFIELD WARP ---
       push();
-      translate(width, 0); scale(-1, 1);
+      translate(width / 2, height / 2);
+      let speed = map(cFlange, 0, 1, 2, 40); // Più guardi su, più vai veloce (Warp Speed!)
+      stroke(255);
+      for (let i = 0; i < stars.length; i++) {
+        stars[i].z -= speed;
+        if (stars[i].z < 1) { stars[i].z = width; stars[i].x = random(-width, width); stars[i].y = random(-height, height); }
+        let sx = map(stars[i].x / stars[i].z, 0, 1, 0, width);
+        let sy = map(stars[i].y / stars[i].z, 0, 1, 0, height);
+        let r = map(stars[i].z, 0, width, 8, 0);
+        fill(255, 255, 255, map(stars[i].z, 0, width, 255, 0)); noStroke();
+        ellipse(sx, sy, r, r);
+      }
+      pop();
+
+      // --- RENDER WEBCAM (AL CENTRO CON EFFETTI) ---
+      push();
+      // Effetto "Wobble" del Ring Modulator
+      let wobbleX = sin(frameCount * 0.5) * cRing * 30;
+      let wobbleY = cos(frameCount * 0.4) * cRing * 30;
       
+      // Allarme Larsen (Shake)
       let shake = vol > 0.85 ? random(-20, 20) : 0;
-      translate(width/2 - video.width/2 + shake, height/2 - video.height/2 + shake);
       
-      let offset = map(Math.abs(curPitch), 0, 24, 0, 40);
+      translate(width/2 + shake + wobbleX, height/2 + shake + wobbleY);
+      scale(-1, 1); // Specchio
+      
+      // Disegna il video centrato. Dimensione standard 640x480
+      let vW = 640, vH = 480;
+
+      // Effetto RGB Split (Pitch)
+      let rgbOffset = map(cPitch, 0, 24, 0, 50);
       blendMode(SCREEN);
-      tint(255, 0, 50, 140); image(video, -offset, 0);
-      tint(0, 255, 255, 140); image(video, offset, 0);
-      tint(255, 255, 255, 180); image(video, 0, 0);
+      tint(255, 0, 50, 150); image(video, -vW/2 - rgbOffset, -vH/2, vW, vH);
+      tint(0, 255, 255, 150); image(video, -vW/2 + rgbOffset, -vH/2, vW, vH);
+      tint(255, 255, 255, 180); image(video, -vW/2, -vH/2, vW, vH);
       blendMode(BLEND);
 
-      if (predictions.length > 0) drawFaceOverlay(vol);
+      // Effetto Bitcrusher (Pixelation / Disturbo a scacchi)
+      if (cBit > 0.1) {
+        let boxSize = map(cBit, 0, 1, 5, 40);
+        fill(0, 255, 0, 40); noStroke();
+        for(let bx = -vW/2; bx < vW/2; bx += boxSize*2) {
+          for(let by = -vH/2; by < vH/2; by += boxSize*2) {
+             rect(bx, by, boxSize, boxSize);
+          }
+        }
+      }
+
+      // Effetto Neon Helmet & Cavi
+      if (predictions.length > 0) drawNeonHelmet(vW, vH, vol);
       pop();
 
-      drawTacticalUI(db, vol);
+      // --- RENDER DASHBOARD TATTICA ---
+      drawCockpitHUD(db, vol);
     }
 
-    function drawBackgroundGrid() {
-      stroke(0, 255, 255, 15); strokeWeight(1);
-      for(let x=0; x<width; x+=50) line(x, 0, x, height);
-      for(let y=0; y<height; y+=50) line(0, y, width, y);
-    }
-
-    function drawFaceOverlay(vol) {
+    function drawNeonHelmet(vW, vH, vol) {
       let pts = predictions[0].scaledMesh;
-      stroke(0, 255, 255, 100); noFill();
-      beginShape(LINES);
-      for(let i=0; i<pts.length; i+=10) vertex(pts[i][0], pts[i][1]);
+      
+      push();
+      // Trasla per centrare le coordinate faceMesh sul video centrato
+      translate(-vW/2, -vH/2);
+
+      // CASCHETTO NEON (Sopraciglia e contorno viso)
+      stroke(0, 255, 255, 150); strokeWeight(2); noFill();
+      beginShape();
+      for(let i=10; i<36; i++) vertex(pts[i][0], pts[i][1]); // Bordo superiore
       endShape();
-      
-      let nose = pts[1];
-      stroke(255); strokeWeight(1.5);
-      ellipse(nose[0], nose[1], 40 + vol*30);
-      line(nose[0]-30, nose[1], nose[0]+30, nose[1]);
-      line(nose[0], nose[1]-30, nose[0], nose[1]+30);
-    }
+      beginShape();
+      for(let i=152; i<170; i+=2) vertex(pts[i][0], pts[i][1]); // Mascella
+      endShape();
 
-    function drawTacticalUI(db, vol) {
-      let isAlert = vol > 0.85;
-      let c = isAlert ? color(255, 0, 50) : color(0, 255, 255);
-      stroke(c); fill(c);
-      
-      // VU-METER
-      let rX = width/2 - 200, rY = height - 80;
-      fill(10, 20, 40, 220); stroke(c); rect(rX, rY, 400, 25, 3);
-      let w = map(vol, 0, 1, 0, 400, true);
-      noStroke(); fill(c); rect(rX, rY, w, 25, 3);
-      
-      if (isAlert) {
-        fill(255, 0, 50, random(50, 130)); rect(0, 0, width, height);
+      // CAVI FLUIDI (Dal collo/mento verso il basso dello schermo)
+      stroke(255, 0, 150, 100); strokeWeight(3);
+      let mento = pts[152];
+      bezier(mento[0], mento[1], mento[0], mento[1]+100, vW/2 - 150, vH, vW/2 - 200, vH+100);
+      bezier(mento[0], mento[1], mento[0], mento[1]+100, vW/2 + 150, vH, vW/2 + 200, vH+100);
+
+      // PARTICELLE (Space Reverb) -> Scorrono sui cavi
+      if (cSpace > 0.1) {
+        let flowY = (frameCount * 10) % 200;
+        noStroke(); fill(0, 255, 255);
+        ellipse(mento[0] - flowY, mento[1] + flowY, 15, 15);
+        ellipse(mento[0] + flowY, mento[1] + flowY, 15, 15);
+        
+        // Bagliore Bocca
+        let bocca = pts[13];
+        fill(0, 255, 255, 50); ellipse(bocca[0], bocca[1], cSpace*150, cSpace*150);
       }
 
-      textAlign(CENTER); textSize(16);
-      if (isAlert && frameCount % 6 < 3) {
-        fill(255); text("⚠ LARSEN EFFECT ALERT // FEEDBACK OVERLOAD ⚠", width/2, rY-15);
-      } else {
-        fill(c); text("NEURAL LINK TELEMETRY // AUDIO CORE MONITOR", width/2, rY-15);
-      }
-
-      // DATI TATTICI (Ripristinati)
-      textAlign(LEFT); fill(0, 255, 255, 180); textSize(14);
-      let xR=width-200, yR=100;
-      text(`> GRAVITY_X: ${curPitch.toFixed(1)} ST`, xR, yR);
-      text(`> JET_PROP: ${(curFlanger*100).toFixed(0)}%`, xR, yR+20);
-      text(`> VOID_Z: ${(curSpace*100).toFixed(0)}%`, xR, yR+40);
-      text(`> SYS.TEMP: ${map(vol, 0, 1, 100, 950).toFixed(0)} K`, xR, yR+60);
-
-      textAlign(RIGHT); fill(0, 255, 255, 80); textSize(11);
-      let dispDb = Math.max(db, -40);
-      text(`SEC_TRACTOR_BEAM_STAT: [${dispDb.toFixed(1)}db]\n`+
-           `ASTRO_NAV_LINK: [ACTIVE]\n`+
-           `HULL_PLATING_LOAD: [${(vol*100).toFixed(1)}%]\n`+
-           `SYS.ERROR_LOG: [CLEAR]\n`, width-20, height-150);
-
-      // CORNICI E DECORAZIONI (Ripristinati)
-      stroke(0, 255, 255, 60); noFill(); strokeWeight(1);
-      drawHUDCorner(20, 20, 60, true);
-      drawHUDCorner(width-20, 20, 60, false);
-
-      let spX=30, spY=height-130, spW=200, spH=80;
-      rect(spX, spY, spW, spH);
-      for(let i=0; i<spW; i+=10) {
-        fill(0, 255, 255, random(30, 80)); noStroke();
-        rect(spX+i, spY+spH, 8, -random(20, spH*vol));
-      }
-
-      // RADAR (Ripristinato)
-      push(); translate(100, 100);
-      stroke(0, 255, 255, 80); ellipse(0, 0, 100, 100);
-      fill(0, 255, 255, 30); ellipse(0, 0, 50, 50);
-      line(-60, 0, 60, 0); line(0, -60, 0, 60);
-      let rx = map(headX, -150, 150, -45, 45, true);
-      let ry = map(headY, -150, 150, 45, -45, true);
-      fill(0, 255, 255); noStroke(); ellipse(rx, ry, 6, 6);
+      // MIRINO OCCHI
+      let leftEye = pts[145], rightEye = pts[374];
+      stroke(255); strokeWeight(1); noFill();
+      rectMode(CENTER);
+      rect(leftEye[0], leftEye[1], 20, 20); rect(rightEye[0], rightEye[1], 20, 20);
+      
       pop();
     }
 
-    function drawHUDCorner(x, y, size, left) {
-      if(left) {
-        line(x, y, x+size, y); line(x, y, x, y+size);
-        line(x, y+size+5, x, y+size+size/2); 
-      } else {
-        line(x, y, x-size, y); line(x, y, x, y+size);
-        line(x, y+size+5, x, y+size+size/2); 
+    function drawCockpitHUD(db, vol) {
+      let c = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
+      
+      // Bordo Monitor "Cockpit"
+      stroke(c); strokeWeight(2); noFill();
+      rect(30, 30, width-60, height-60);
+      
+      // HOLOGRAPHIC WAVEFORM PROJECTOR (In alto al centro)
+      let wave = analyzer.getValue();
+      push();
+      translate(width/2, 100);
+      stroke(0, 255, 255, 200); strokeWeight(2); noFill();
+      beginShape();
+      for (let i = 0; i < wave.length; i++) {
+        let x = map(i, 0, wave.length, -200, 200);
+        let y = wave[i] * 50; // Moltiplicatore altezza onda
+        vertex(x, y);
       }
+      endShape();
+      // Glow sotto la forma d'onda
+      fill(0, 255, 255, 20); noStroke(); ellipse(0, 0, 400, 50);
+      fill(c); textAlign(CENTER); textSize(12); text("HOLOGRAPHIC VOICE PROJECTOR", 0, 40);
+      pop();
+
+      // LARSEN VU-METER
+      let rX = width/2 - 250, rY = height - 80;
+      fill(10, 20, 40, 220); stroke(c); rect(rX, rY, 500, 20);
+      let w = map(vol, 0, 1, 0, 500, true);
+      noStroke(); fill(c); rect(rX, rY, w, 20);
+      
+      if (vol > 0.85) { fill(255, 0, 50, random(50, 100)); rect(0, 0, width, height); }
+
+      textAlign(CENTER); textSize(18); fontStyle = BOLD;
+      if (vol > 0.85 && frameCount % 6 < 3) {
+        fill(255); text("⚠ LARSEN EFFECT ALERT // INTEGRITY CRITICAL ⚠", width/2, rY-15);
+      } else {
+        fill(c); text("AUDIO CORE MASTER GAIN", width/2, rY-15);
+      }
+
+      // PANNELLI DIAGNOSTICI (Sinistra)
+      textAlign(LEFT); fill(0, 255, 255, 200); textSize(16);
+      text(`> GRAVITY (X_R): +${cPitch.toFixed(1)} ST`, 50, height/2 - 60);
+      text(`> ALIEN_MOD (X_L): ${(cRing*100).toFixed(0)}%`, 50, height/2 - 30);
+      text(`> JET_FLANGE (Y_U): ${(cFlange*100).toFixed(0)}%`, 50, height/2);
+      text(`> DATA_CORRUPT (Y_D): ${(cBit*100).toFixed(0)}%`, 50, height/2 + 30);
+      text(`> VOID_RESONANCE (Z): ${(cSpace*100).toFixed(0)}%`, 50, height/2 + 60);
+
+      // FINTO TESTO DI SISTEMA (Destra)
+      textAlign(RIGHT); fill(0, 255, 255, 100); textSize(12);
+      let txt = `NEURAL LINK: [STABLE]\nLATENCY: [${Math.floor(random(8,12))}ms]\nPEAK: [${db.toFixed(1)} dB]\n\n`;
+      txt += `SYS.MEM: [0x8A7B2]\nROUTE: [UNDEFINED]\nTARGET: [UNKNOWN]`;
+      text(txt, width - 50, height/2);
+
+      // DECORAZIONI ANGOLARI SCIFI
+      stroke(c); noFill(); strokeWeight(3);
+      line(30, 80, 30, 30); line(30, 30, 80, 30); // Top Left
+      line(width-80, 30, width-30, 30); line(width-30, 30, width-30, 80); // Top Right
+      line(30, height-80, 30, height-30); line(30, height-30, 80, height-30); // Bot Left
+      line(width-80, height-30, width-30, height-30); line(width-30, height-30, width-30, height-80); // Bot Right
     }
 
     window.emergencyMute = () => { Tone.Destination.mute = !Tone.Destination.mute; document.getElementById('panic').innerText = Tone.Destination.mute ? "SBLOCCA MOTORI" : "TAGLIO MOTORI"; };
