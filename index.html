@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // VR COMMAND CENTER</title>
+  <title>VOID RIDER // FULL VR IMMERSION</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -26,6 +26,7 @@
     }
     h1 { margin: 0 0 20px 0; font-size: 2.5rem; letter-spacing: 5px; border-bottom: 2px solid #00ffff; padding-bottom: 10px; text-shadow: 0 0 15px #00ffff; }
     #status-msg { margin-bottom: 25px; color: #88ccaa; font-size: 1.1rem; line-height: 1.6; }
+    
     .btn {
       display: inline-block; padding: 15px 40px; margin-top: 15px; font-size: 1.2rem;
       background: rgba(0, 255, 255, 0.1); color: #00ffff; border: 1px solid #00ffff;
@@ -34,19 +35,17 @@
     }
     .btn:hover { background: #00ffff; color: #000; box-shadow: 0 0 25px #00ffff; }
 
-    /* --- EMERGENCY KILL SWITCH --- */
     #panic {
       position: absolute; top: 20px; right: 20px; z-index: 5000; display: none;
       background: rgba(255, 0, 50, 0.2); color: #ff0032; border: 1px solid #ff0032;
-      padding: 15px 30px; cursor: pointer; text-transform: uppercase; font-weight: bold; font-size: 1rem;
+      padding: 15px 30px; cursor: pointer; font-weight: bold; font-size: 1rem;
     }
-    #panic:hover { background: #ff0032; color: #000; box-shadow: 0 0 20px #ff0032;}
 
     /* --- HOTSPOTS (Cliccabili per i Tutorial) --- */
     .hotspot {
       position: absolute; background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
       z-index: 1000; display: none; cursor: pointer; transition: 0.3s;
-      display: flex; justify-content: center; align-items: center; text-align: center; color: rgba(0,255,255,0.5); font-weight: bold; font-size: 1.2rem;
+      justify-content: center; align-items: center; text-align: center; color: rgba(0,255,255,0.5); font-weight: bold; font-size: 1.2rem;
     }
     .hotspot:hover { background: rgba(0, 255, 255, 0.2); border: 1px solid #00ffff; color: #00ffff; text-shadow: 0 0 10px #00ffff; box-shadow: inset 0 0 20px rgba(0,255,255,0.5); }
     
@@ -58,8 +57,8 @@
     /* --- TUTORIAL MODAL --- */
     #tutorial-modal {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.9); border: 2px solid #00ffff; box-shadow: 0 0 50px #00ffff;
-      padding: 40px; z-index: 9000; display: none; width: 500px; text-align: center;
+      background: rgba(0, 5, 10, 0.95); border: 2px solid #00ffff; box-shadow: 0 0 50px #00ffff;
+      padding: 40px; z-index: 9000; display: none; width: 500px; text-align: center; border-radius: 10px;
     }
     #tut-title { font-size: 2rem; color: #fff; margin-bottom: 20px; text-shadow: 0 0 10px #00ffff;}
     #tut-desc { font-size: 1.2rem; color: #88ccaa; line-height: 1.6; margin-bottom: 30px;}
@@ -70,22 +69,22 @@
 <body>
 
   <div id="ui-container">
-    <h1>VOID RIDER // VR COCKPIT</h1>
+    <h1>VOID RIDER // DEEP DIVE</h1>
     <div id="status-msg">
-      <b>SISTEMA HUD NEURALE V3.0 (DESKTOP IMMERSION)</b><br><br>
-      > Casco Neurale: ONLINE<br>
-      > Proiettore Olografico Audio: ONLINE<br>
-      > Motore Warp Starfield: ONLINE<br>
+      <b>INIZIALIZZAZIONE AMBIENTE VR</b><br><br>
+      > Isolamento Sfondo Esterno: ONLINE<br>
+      > Rete Neurale e Cavi Sinaptici: ONLINE<br>
+      > Motore Warp (Hyper-Speed): ONLINE<br>
       <br>
-      <span style="color:#ff0033">> WARNING: Esperienza sensoriale intensa. Clicca sui bordi dello schermo per accedere ai tutorial di volo.</span>
+      <span style="color:#ff0033">> WARNING: Clicca sui bordi dello schermo per accedere ai tutorial dei moduli.</span>
     </div>
-    <button class="btn" id="action-btn">ESTABLISH FULL LINK</button>
+    <button class="btn" id="action-btn">INDOSSA CASCO NEURALE</button>
   </div>
 
-  <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[FLANGER]</div>
-  <div id="hs-bottom" class="hotspot" onclick="showTutorial('DOWN')">[BITCRUSHER]</div>
-  <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">[RING MOD]</div>
-  <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')">[PITCH UP]</div>
+  <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[FLANGER // PROPULSORI]</div>
+  <div id="hs-bottom" class="hotspot" onclick="showTutorial('DOWN')">[BITCRUSHER // GLITCH]</div>
+  <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">[RING MOD // ALIEN]</div>
+  <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')">[PITCH UP // GRAVITÀ]</div>
 
   <div id="tutorial-modal">
     <div id="tut-title">TITOLO</div>
@@ -96,27 +95,53 @@
   <button id="panic" onclick="window.emergencyMute()">TAGLIO MOTORI</button>
 
   <script>
-    // --- VARIABILI GLOBALI ---
     let video, facemesh, predictions = [];
     let noiseGate, eq, pitchShift, ringMod, chebyshev, flangerEffect, bitcrusher, spaceDelay, spaceReverb, masterVol, limiter, meter, analyzer;
     
-    // Valori correnti (Lerp) per le transizioni fluide
     let cPitch = 0, cRing = 0, cFlange = 0, cBit = 0, cSpace = 0;
     let isRunning = false;
-    let stars = []; // Per l'effetto Starfield Warp
+    let stars = []; 
 
-    // --- SETUP P5.JS ---
-    function setup() {
-      let canvas = createCanvas(windowWidth, windowHeight);
-      canvas.position(0, 0); canvas.style('z-index', '-1'); 
-      
-      // Crea le stelle iniziali
-      for (let i = 0; i < 200; i++) {
-        stars.push({ x: random(-width, width), y: random(-height, height), z: random(width) });
+    // Silhouette facciale per il taglio (Green Screen Effect)
+    const silhouetteIndices = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+
+    // --- CLASSE STELLE WARP SPEED ---
+    class Star {
+      constructor() {
+        this.x = random(-width, width);
+        this.y = random(-height, height);
+        this.z = random(width);
+        this.pz = this.z;
+      }
+      update(speed) {
+        this.z -= speed;
+        if (this.z < 1) {
+          this.z = width;
+          this.x = random(-width, width);
+          this.y = random(-height, height);
+          this.pz = this.z;
+        }
+      }
+      show() {
+        let sx = map(this.x / this.z, 0, 1, 0, width);
+        let sy = map(this.y / this.z, 0, 1, 0, height);
+        let px = map(this.x / this.pz, 0, 1, 0, width);
+        let py = map(this.y / this.pz, 0, 1, 0, height);
+        this.pz = this.z;
+        
+        let alpha = map(this.z, 0, width, 255, 0);
+        stroke(200, 255, 255, alpha);
+        strokeWeight(map(this.z, 0, width, 4, 0));
+        line(px, py, sx, sy); // Linea estesa (Hyperspeed)
       }
     }
 
-    // --- INITIALIZATION ---
+    function setup() {
+      let canvas = createCanvas(windowWidth, windowHeight);
+      canvas.position(0, 0); canvas.style('z-index', '-1'); 
+      for (let i = 0; i < 400; i++) stars.push(new Star()); // Raddoppiate le stelle
+    }
+
     document.getElementById('action-btn').addEventListener('click', async () => {
       document.getElementById('action-btn').style.display = 'none';
       try {
@@ -124,34 +149,26 @@
         await Tone.start();
         const micSource = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        // --- MOTORE AUDIO 5D (Fixato) ---
+        // --- AUDIO ENGINE ---
         noiseGate = new Tone.Gate(-40, 0.1);
         eq = new Tone.EQ3(0, 0, -10);
-        analyzer = new Tone.Waveform(256); // Proiettore Olografico
+        analyzer = new Tone.Waveform(256);
         meter = new Tone.Meter();
 
-        // 1. Pitch Up (Testa Destra)
         pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0; 
-        
-        // 2. Ring Modulator (Testa Sinistra) - Creato con FrequencyShifter a 200Hz
         ringMod = new Tone.FrequencyShifter(200); ringMod.wet.value = 0;
-
-        // 3. Flanger / Jet (Testa Su) - Combinazione di Chebyshev e Chorus
+        
         chebyshev = new Tone.Chebyshev(50); chebyshev.wet.value = 0;
         flangerEffect = new Tone.Chorus({ frequency: 0.2, delayTime: 2, depth: 1, feedback: 0.85, spread: 180 }).start();
         flangerEffect.wet.value = 0;
 
-        // 4. Bitcrusher / Glitch (Testa Giù)
         bitcrusher = new Tone.BitCrusher(4); bitcrusher.wet.value = 0;
 
-        // 5. Space Reverb (Bocca)
         spaceDelay = new Tone.FeedbackDelay("16n", 0.6); spaceDelay.wet.value = 0;
         spaceReverb = new Tone.Freeverb({ roomSize: 0.85, dampening: 1500 }); spaceReverb.wet.value = 0;
 
-        // Protezioni
         masterVol = new Tone.Volume(-15); limiter = new Tone.Limiter(-1);
 
-        // Routing Definitivo a catena
         Tone.connect(micSource, noiseGate);
         noiseGate.chain(eq, analyzer, meter, pitchShift);
         pitchShift.chain(ringMod, bitcrusher, chebyshev, flangerEffect, spaceDelay, spaceReverb, masterVol, limiter, Tone.Destination);
@@ -162,21 +179,14 @@
             isRunning = true;
             document.getElementById('ui-container').style.display = 'none';
             document.getElementById('panic').style.display = 'block';
-            
-            // Attiva gli hotspot dopo il caricamento AI
             document.querySelectorAll('.hotspot').forEach(el => el.style.display = 'flex');
           });
           facemesh.on("predict", r => predictions = r);
         });
         video.hide();
-      } catch (e) { 
-        document.getElementById('status-msg').innerHTML = "<span style='color:#ff0033;'>ERRORE:</span> " + e.message;
-        document.getElementById('action-btn').style.display = 'inline-block';
-        document.getElementById('action-btn').innerText = "RIPROVA";
-      }
+      } catch (e) { alert("Errore: " + e.message); }
     });
 
-    // --- GESTIONE TUTORIAL ---
     window.showTutorial = function(type) {
       const modal = document.getElementById('tutorial-modal');
       const title = document.getElementById('tut-title');
@@ -184,173 +194,168 @@
       
       if(type === 'LEFT') {
         title.innerText = "MODULATORE AD ANELLO";
-        desc.innerText = "Spostati verso SINISTRA.\nQuesto attiva un MODULATORE AD ANELLO. Modificherà il tuo suono creando sfumature metalliche e aliene. Visivamente, il sistema perderà l'orientamento spaziale (Effetto Wobble).";
+        desc.innerText = "Spostati verso SINISTRA.\nAttiva il MODULATORE AD ANELLO. La tua voce subirà mutazioni aliene e metalliche. Visivamente, il tuo elmetto perderà stabilità spaziale.";
       } else if(type === 'RIGHT') {
         title.innerText = "PITCH UP (GRAVITÀ ZERO)";
-        desc.innerText = "Spostati verso DESTRA.\nQuesto alza il PITCH della tua voce in modo estremo, come se ti trovassi in una zona a bassa gravità spaziale.";
+        desc.innerText = "Spostati verso DESTRA.\nAlza il PITCH della tua voce, come se ti trovassi nel vuoto a bassa gravità. I cavi neurali di destra si illumineranno.";
       } else if(type === 'UP') {
         title.innerText = "FLANGER (PROPULSORI)";
-        desc.innerText = "Spostati verso l'ALTO.\nQuesto attiva il FLANGER RISONANTE. È come accendere i propulsori a ioni della navicella. Sentirai un potente fruscio metallico e le stelle accelereranno.";
+        desc.innerText = "Spostati verso l'ALTO.\nAttiva il FLANGER RISONANTE. Stai iniettando plasma nei motori. Le stelle intorno a te accelereranno a velocità luce.";
       } else if(type === 'DOWN') {
         title.innerText = "BITCRUSHER (CORRUZIONE DATI)";
-        desc.innerText = "Spostati verso il BASSO.\nQuesto attiva un BITCRUSHER a 4-bit. Frammenterà il segnale audio creando distorsioni digitali e glitch. Lo schermo si pixelizzerà come dati corrotti.";
+        desc.innerText = "Spostati verso il BASSO.\nAttiva il BITCRUSHER. I dati audio vengono compressi a 4-bit, creando frammentazione e pixelizzazione visiva estrema.";
       }
       modal.style.display = 'block';
     }
 
-    // --- LOOP PRINCIPALE GRAFICO ---
     function draw() {
-      background(0, 2, 8); // Deep space
+      background(1, 2, 6); // Spazio nero intenso
       if (!isRunning) return;
 
       let db = meter.getValue();
       let vol = map(db, -25, -2, 0, 1, true);
 
-      // --- LOGICA MAPPING BIOMETRICA ---
+      // --- ELABORAZIONE BIOMETRICA ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         let nose = pts[1];
         let topL = pts[13], botL = pts[14];
 
-        // Normalizzazione Vettori della testa rispetto al centro del video
-        // Valori da -1 (Sinistra/Alto) a +1 (Destra/Basso)
-        // Nota: Webcam specchiata -> Se io vado a Destra (nella realtà), sul canvas vado a Sinistra (valori negativi).
         let nX = (nose[0] - video.width/2) / (video.width/2); 
         let nY = (nose[1] - video.height/2) / (video.height/2);
 
-        // BOCCA (Z)
+        // BOCCA (Space)
         let mDist = dist(topL[0], topL[1], botL[0], botL[1]);
         cSpace = lerp(cSpace, mDist > 12 ? map(mDist, 12, 35, 0, 0.85, true) : 0, 0.15);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
 
-        // X: DESTRA E SINISTRA
+        // X: DESTRA (Pitch) E SINISTRA (Ring Mod)
         let tPitch = 0, tPitchWet = 0, tRing = 0;
-        if (nX < -0.15) { // Utente si muove a DESTRA (Pitch Up)
+        if (nX < -0.15) { 
           tPitch = map(nX, -0.15, -0.8, 0, 24, true);
           tPitchWet = map(nX, -0.15, -0.4, 0, 1, true);
-        } else if (nX > 0.15) { // Utente si muove a SINISTRA (Ring Modulator)
+        } else if (nX > 0.15) { 
           tRing = map(nX, 0.15, 0.8, 0, 1, true);
         }
-        
         cPitch = lerp(cPitch, tPitch, 0.15);
-        pitchShift.pitch = cPitch;
-        pitchShift.wet.value = lerp(pitchShift.wet.value, tPitchWet, 0.15);
-        
-        cRing = lerp(cRing, tRing, 0.15);
-        ringMod.wet.value = cRing;
+        pitchShift.pitch = cPitch; pitchShift.wet.value = lerp(pitchShift.wet.value, tPitchWet, 0.15);
+        cRing = lerp(cRing, tRing, 0.15); ringMod.wet.value = cRing;
 
-        // Y: ALTO E BASSO
+        // Y: ALTO (Flanger) E BASSO (Bitcrusher)
         let tFlange = 0, tBit = 0;
-        if (nY < -0.1) { // Utente si muove in ALTO (Flanger)
-          tFlange = map(nY, -0.1, -0.8, 0, 1, true);
-        } else if (nY > 0.15) { // Utente si muove in BASSO (Bitcrusher)
-          tBit = map(nY, 0.15, 0.8, 0, 1, true);
-        }
+        if (nY < -0.1) tFlange = map(nY, -0.1, -0.8, 0, 1, true);
+        else if (nY > 0.15) tBit = map(nY, 0.15, 0.8, 0, 1, true);
         
-        // Assegno i valori lerpati agli effetti Y
         cFlange = lerp(cFlange, tFlange, 0.2);
-        chebyshev.wet.value = cFlange;
-        flangerEffect.wet.value = cFlange;
-        
-        cBit = lerp(cBit, tBit, 0.2);
-        bitcrusher.wet.value = cBit;
+        chebyshev.wet.value = cFlange; flangerEffect.wet.value = cFlange;
+        cBit = lerp(cBit, tBit, 0.2); bitcrusher.wet.value = cBit;
       }
 
-      // --- DYNAMIC STARFIELD WARP ---
+      // --- RENDER STARFIELD (Sfondo sempre visibile) ---
       push();
       translate(width / 2, height / 2);
-      let speed = map(cFlange, 0, 1, 2, 40); // Più guardi su, più vai veloce (Warp Speed!)
-      stroke(255);
-      for (let i = 0; i < stars.length; i++) {
-        stars[i].z -= speed;
-        if (stars[i].z < 1) { stars[i].z = width; stars[i].x = random(-width, width); stars[i].y = random(-height, height); }
-        let sx = map(stars[i].x / stars[i].z, 0, 1, 0, width);
-        let sy = map(stars[i].y / stars[i].z, 0, 1, 0, height);
-        let r = map(stars[i].z, 0, width, 8, 0);
-        fill(255, 255, 255, map(stars[i].z, 0, width, 255, 0)); noStroke();
-        ellipse(sx, sy, r, r);
+      let warpSpeed = map(cFlange, 0, 1, 2, 60); // Velocità Warp basata sul Flanger
+      for (let star of stars) {
+        star.update(warpSpeed);
+        star.show();
       }
       pop();
 
-      // --- RENDER WEBCAM (AL CENTRO CON EFFETTI VISIVI) ---
+      // --- RENDER UTENTE AL CENTRO ---
       push();
-      // Effetto "Wobble" del Ring Modulator
-      let wobbleX = sin(frameCount * 0.5) * cRing * 30;
-      let wobbleY = cos(frameCount * 0.4) * cRing * 30;
-      
-      // Allarme Larsen (Camera Shake estremo)
-      let shake = vol > 0.85 ? random(-20, 20) : 0;
+      let wobbleX = sin(frameCount * 0.5) * cRing * 20;
+      let wobbleY = cos(frameCount * 0.4) * cRing * 20;
+      let shake = vol > 0.85 ? random(-15, 15) : 0;
       
       translate(width/2 + shake + wobbleX, height/2 + shake + wobbleY);
-      scale(-1, 1); // Effetto Specchio (Naturale)
       
-      let vW = 640, vH = 480;
+      // OBLÒ AL NEON
+      stroke(0, 255, 255, 150); strokeWeight(4); fill(0, 5, 15, 200);
+      ellipse(0, 0, 500, 500); // Bordo esterno Oblò
+      
+      if (predictions.length > 0) {
+        let pts = predictions[0].scaledMesh;
+        
+        // 1. MASKING (GREEN SCREEN TRICK)
+        drawingContext.save(); // Salva stato
+        beginShape();
+        // Aggiungiamo un po' di margine superiore per i capelli
+        vertex(pts[10][0] - video.width/2, pts[10][1] - video.height/2 - 50); 
+        for (let i of silhouetteIndices) {
+          // Specchia le X direttamente qui
+          vertex(-(pts[i][0] - video.width/2), pts[i][1] - video.height/2);
+        }
+        endShape(CLOSE);
+        drawingContext.clip(); // Ritaglia il canvas!
 
-      // Effetto RGB Split (Legato al Pitch Shift)
-      let rgbOffset = map(cPitch, 0, 24, 0, 50);
-      blendMode(SCREEN);
-      tint(255, 0, 50, 150); image(video, -vW/2 - rgbOffset, -vH/2, vW, vH);
-      tint(0, 255, 255, 150); image(video, -vW/2 + rgbOffset, -vH/2, vW, vH);
-      tint(255, 255, 255, 180); image(video, -vW/2, -vH/2, vW, vH);
-      blendMode(BLEND);
+        // 2. DISEGNA IL VIDEO DENTRO LA MASCHERA
+        push();
+        scale(-1, 1); // Specchio
+        
+        // RGB Split Effect
+        let rO = map(cPitch, 0, 24, 0, 40);
+        blendMode(SCREEN);
+        tint(255, 0, 50, 180); image(video, -video.width/2 - rO, -video.height/2);
+        tint(0, 255, 255, 180); image(video, -video.width/2 + rO, -video.height/2);
+        tint(255, 255, 255, 200); image(video, -video.width/2, -video.height/2);
+        blendMode(BLEND);
 
-      // Effetto Bitcrusher visivo (Pixelation a scacchi)
-      if (cBit > 0.1) {
-        let boxSize = map(cBit, 0, 1, 5, 40);
-        fill(0, 255, 0, 40); noStroke();
-        for(let bx = -vW/2; bx < vW/2; bx += boxSize*2) {
-          for(let by = -vH/2; by < vH/2; by += boxSize*2) {
-             rect(bx, by, boxSize, boxSize);
+        // Bitcrusher Pixelation (Solo sulla faccia)
+        if (cBit > 0.1) {
+          let bSize = map(cBit, 0, 1, 8, 35);
+          fill(0, 255, 0, 40); noStroke();
+          for(let bx = -video.width/2; bx < video.width/2; bx += bSize*2) {
+            for(let by = -video.height/2; by < video.height/2; by += bSize*2) {
+               rect(bx, by, bSize, bSize);
+            }
           }
         }
+        pop();
+        
+        drawingContext.restore(); // Rimuovi maschera
       }
-
-      // Effetto Neon Helmet & Cavi
-      if (predictions.length > 0) drawNeonHelmet(vW, vH, vol);
       pop();
 
-      // --- RENDER DASHBOARD TATTICA ---
+      // --- SISTEMA NERVOSO E CAVI ---
+      if (predictions.length > 0) drawNeuralNetwork();
+
+      // --- DASHBOARD UI ---
       drawCockpitHUD(db, vol);
     }
 
-    function drawNeonHelmet(vW, vH, vol) {
-      let pts = predictions[0].scaledMesh;
-      
+    function drawNeuralNetwork() {
       push();
-      translate(-vW/2, -vH/2);
+      translate(width/2, height/2);
+      
+      let baseColor = color(0, 255, 255, 80);
+      strokeWeight(4); noFill();
 
-      // CASCHETTO NEON (Sopraciglia e contorno mascella)
-      stroke(0, 255, 255, 150); strokeWeight(2); noFill();
-      beginShape();
-      for(let i=10; i<36; i++) vertex(pts[i][0], pts[i][1]); // Frontale
-      endShape();
-      beginShape();
-      for(let i=152; i<170; i+=2) vertex(pts[i][0], pts[i][1]); // Mascella
-      endShape();
-
-      // CAVI FLUIDI (Dal collo verso la rete neurale della nave)
-      stroke(255, 0, 150, 100); strokeWeight(3);
-      let mento = pts[152];
-      bezier(mento[0], mento[1], mento[0], mento[1]+100, vW/2 - 150, vH, vW/2 - 200, vH+100);
-      bezier(mento[0], mento[1], mento[0], mento[1]+100, vW/2 + 150, vH, vW/2 + 200, vH+100);
-
-      // PARTICELLE (Space Reverb) -> Flusso di dati lungo i cavi
-      if (cSpace > 0.1) {
-        let flowY = (frameCount * 10) % 200;
-        noStroke(); fill(0, 255, 255);
-        ellipse(mento[0] - flowY, mento[1] + flowY, 15, 15);
-        ellipse(mento[0] + flowY, mento[1] + flowY, 15, 15);
+      // Funzione per disegnare cavi e neuroni pulsanti
+      function drawCable(startX, startY, endX, endY, intensity, pulseColor) {
+        stroke(intensity > 0.1 ? pulseColor : baseColor);
+        bezier(startX, startY, startX*1.5, startY*1.5, endX*0.5, endY*0.5, endX, endY);
         
-        // Bagliore della Bocca aperto sul vuoto
-        let bocca = pts[13];
-        fill(0, 255, 255, 50); ellipse(bocca[0], bocca[1], cSpace*150, cSpace*150);
+        // Neuroni pulsanti
+        if (intensity > 0.1) {
+          let t = (frameCount * 0.02 * (1 + intensity)) % 1; // Scorre da 0 a 1
+          let px = bezierPoint(startX, startX*1.5, endX*0.5, endX, t);
+          let py = bezierPoint(startY, startY*1.5, endY*0.5, endY, t);
+          noStroke(); fill(pulseColor);
+          ellipse(px, py, 12 + intensity*10, 12 + intensity*10);
+          fill(255); ellipse(px, py, 6, 6);
+          noFill();
+        }
       }
 
-      // MIRINO OCCHI
-      let leftEye = pts[145], rightEye = pts[374];
-      stroke(255); strokeWeight(1); noFill();
-      rectMode(CENTER);
-      rect(leftEye[0], leftEye[1], 20, 20); rect(rightEye[0], rightEye[1], 20, 20);
+      // Connessioni (Dai bordi dell'oblò r=250 verso i lati dello schermo)
+      // Flanger (ALTO)
+      drawCable(0, -250, 0, -height/2, cFlange, color(255, 200, 0)); 
+      // Bitcrusher (BASSO)
+      drawCable(0, 250, 0, height/2, cBit, color(0, 255, 50));
+      // Ring Mod (SINISTRA)
+      drawCable(-250, 0, -width/2, 0, cRing, color(255, 0, 255));
+      // Pitch Up (DESTRA)
+      drawCable(250, 0, width/2, 0, cPitch/24, color(0, 150, 255));
       
       pop();
     }
@@ -358,57 +363,30 @@
     function drawCockpitHUD(db, vol) {
       let c = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       
-      // Bordo Monitor Principale "Cockpit"
-      stroke(c); strokeWeight(2); noFill();
-      rect(30, 30, width-60, height-60);
-      
-      // HOLOGRAPHIC WAVEFORM PROJECTOR
+      // HOLOGRAPHIC WAVEFORM PROJECTOR (In alto)
       let wave = analyzer.getValue();
       push();
-      translate(width/2, 100);
-      stroke(0, 255, 255, 200); strokeWeight(2); noFill();
+      translate(width/2, 80);
+      stroke(c); strokeWeight(2); noFill();
       beginShape();
       for (let i = 0; i < wave.length; i++) {
-        let x = map(i, 0, wave.length, -200, 200);
-        let y = wave[i] * 50; 
+        let x = map(i, 0, wave.length, -250, 250);
+        let y = wave[i] * 60; 
         vertex(x, y);
       }
       endShape();
-      
-      fill(0, 255, 255, 20); noStroke(); ellipse(0, 0, 400, 50);
-      fill(c); textAlign(CENTER); textSize(12); text("HOLOGRAPHIC VOICE PROJECTOR", 0, 40);
+      fill(0, 255, 255, 20); noStroke(); ellipse(0, 0, 500, 40);
       pop();
 
-      // LARSEN VU-METER
-      let rX = width/2 - 250, rY = height - 80;
-      fill(10, 20, 40, 220); stroke(c); rect(rX, rY, 500, 20);
+      // LARSEN VU-METER (In basso)
+      let rX = width/2 - 250, rY = height - 60;
+      fill(10, 20, 40, 220); stroke(c); strokeWeight(2); rect(rX, rY, 500, 20);
       let w = map(vol, 0, 1, 0, 500, true);
       noStroke(); fill(c); rect(rX, rY, w, 20);
       
-      if (vol > 0.85) { fill(255, 0, 50, random(50, 100)); rect(0, 0, width, height); }
+      if (vol > 0.85) { fill(255, 0, 50, random(40, 90)); rect(0, 0, width, height); }
 
-      textAlign(CENTER); textSize(18); fontStyle = BOLD;
-      if (vol > 0.85 && frameCount % 6 < 3) {
-        fill(255); text("⚠ LARSEN EFFECT ALERT // INTEGRITY CRITICAL ⚠", width/2, rY-15);
-      } else {
-        fill(c); text("AUDIO CORE MASTER GAIN", width/2, rY-15);
-      }
-
-      // PANNELLI DIAGNOSTICI DEL COCKPIT (Sinistra)
-      textAlign(LEFT); fill(0, 255, 255, 200); textSize(16);
-      text(`> GRAVITY (X_R): +${cPitch.toFixed(1)} ST`, 50, height/2 - 60);
-      text(`> ALIEN_MOD (X_L): ${(cRing*100).toFixed(0)}%`, 50, height/2 - 30);
-      text(`> JET_FLANGE (Y_U): ${(cFlange*100).toFixed(0)}%`, 50, height/2);
-      text(`> DATA_CORRUPT (Y_D): ${(cBit*100).toFixed(0)}%`, 50, height/2 + 30);
-      text(`> VOID_RESONANCE (Z): ${(cSpace*100).toFixed(0)}%`, 50, height/2 + 60);
-
-      // FINTO TESTO DI SISTEMA (Destra)
-      textAlign(RIGHT); fill(0, 255, 255, 100); textSize(12);
-      let txt = `NEURAL LINK: [STABLE]\nLATENCY: [${Math.floor(random(8,12))}ms]\nPEAK: [${db.toFixed(1)} dB]\n\n`;
-      txt += `SYS.MEM: [0x8A7B2]\nROUTE: [UNDEFINED]\nTARGET: [UNKNOWN]`;
-      text(txt, width - 50, height/2);
-
-      // DECORAZIONI ANGOLARI (Stile Sci-Fi)
+      // CORNICI HUD
       stroke(c); noFill(); strokeWeight(3);
       line(30, 80, 30, 30); line(30, 30, 80, 30); 
       line(width-80, 30, width-30, 30); line(width-30, 30, width-30, 80); 
