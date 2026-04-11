@@ -68,7 +68,7 @@
   <div id="dashboard-controls">
     <div class="slider-container">
       <span>GAIN MICROFONO:</span>
-      <input type="range" id="mic-sens" min="0" max="30" value="12" step="1">
+      <input type="range" id="mic-sens" min="0" max="30" value="1" step="1">
       <span id="sens-val" style="min-width: 60px;">+12dB</span>
     </div>
   </div>
@@ -128,7 +128,7 @@
 
       // AUDIO ENGINE TATTICO
       let initialGain = document.getElementById('mic-sens').value;
-      noiseGate = new Tone.Gate(-45, 0.1); // Taglia i rumori di fondo se non parli
+      noiseGate = new Tone.Gate(-20, 0.1); // Taglia i rumori di fondo se non parli
       preAmp = new Tone.Volume(parseFloat(initialGain)); // L'utente amplifica a piacimento
       
       meter = new Tone.Meter();
