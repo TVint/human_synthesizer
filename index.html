@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // MASTER FILE DEFINITIVO</title>
+  <title>VOID RIDER // STUDIO CALIBRATION</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -16,12 +16,8 @@
       font-family: 'Share Tech Mono', monospace; overflow: hidden; 
     }
 
-    /* =========================================
-       LIVELLO 1: SFONDO GALASSIA ANIMATO (CSS)
-       ========================================= */
     #galaxy-bg {
       position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; z-index: 1;
-      /* SOSTITUISCI L'URL QUI SOTTO CON LA TUA IMMAGINE DELLA GALASSIA */
       background: url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2048&auto=format&fit=crop') center/cover no-repeat;
       opacity: 0.6; animation: galaxyDrift 60s infinite alternate linear; pointer-events: none;
     }
@@ -30,47 +26,43 @@
       100% { transform: scale(1.1) rotate(2deg); }
     }
 
-    /* =========================================
-       LIVELLO 3: INTERFACCIA E CONTROLLI (HTML)
-       ========================================= */
     #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; }
 
     #boot-screen {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 5, 15, 0.9); border: 2px solid #0ff; padding: 40px; 
       text-align: center; width: 600px; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
-      pointer-events: auto;
+      pointer-events: auto; border-radius: 5px;
     }
     h1 { margin: 0 0 20px 0; font-size: 2.5rem; letter-spacing: 5px; border-bottom: 2px solid #0ff; padding-bottom: 10px; }
-    .btn { padding: 15px 40px; font-size: 1.2rem; background: rgba(0, 255, 255, 0.1); color: #0ff; border: 1px solid #0ff; cursor: pointer; font-weight: bold; transition: 0.3s; }
+    .btn { padding: 15px 40px; font-size: 1.2rem; background: rgba(0, 255, 255, 0.1); color: #0ff; border: 1px solid #0ff; cursor: pointer; font-weight: bold; transition: 0.3s; border-radius: 3px;}
     .btn:hover { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
 
     #panic {
       position: absolute; top: 30px; right: 30px; display: none; pointer-events: auto;
       background: rgba(255, 0, 50, 0.2); color: #ff0032; border: 2px solid #ff0032;
-      padding: 15px 30px; cursor: pointer; font-weight: bold; font-size: 1.2rem; transition: 0.2s;
+      padding: 15px 30px; cursor: pointer; font-weight: bold; font-size: 1.2rem; transition: 0.2s; border-radius: 3px;
     }
 
     #dashboard-controls {
       position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-      background: rgba(0, 10, 25, 0.85); border: 1px solid #0ff; padding: 15px 40px;
+      background: rgba(0, 10, 25, 0.9); border: 1px solid #0ff; padding: 15px 40px;
       display: none; align-items: center; gap: 20px; z-index: 2000; pointer-events: auto;
-      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); border-radius: 5px;
+      box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); border-radius: 5px; backdrop-filter: blur(5px);
     }
     .slider-container { display: flex; align-items: center; gap: 15px; font-size: 1.1rem; }
-    input[type=range] { -webkit-appearance: none; width: 200px; background: transparent; }
+    input[type=range] { -webkit-appearance: none; width: 250px; background: transparent; }
     input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none; height: 20px; width: 10px; border-radius: 0;
-      background: #0ff; cursor: pointer; box-shadow: 0 0 10px #0ff; margin-top: -8px;
+      -webkit-appearance: none; height: 20px; width: 10px; background: #0ff; cursor: pointer; box-shadow: 0 0 10px #0ff; margin-top: -8px;
     }
     input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cursor: pointer; background: rgba(0, 255, 255, 0.3); border-radius: 2px; }
 
     .hotspot {
       position: absolute; display: none; pointer-events: auto; cursor: pointer;
-      background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.5);
-      justify-content: center; align-items: center; color: rgba(0,255,255,0.8); font-weight: bold; font-size: 1.2rem; transition: 0.3s;
+      background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
+      justify-content: center; align-items: center; color: rgba(0,255,255,0.6); font-weight: bold; font-size: 1.2rem; transition: 0.3s;
     }
-    .hotspot:hover { background: rgba(0, 255, 255, 0.3); text-shadow: 0 0 10px #0ff; }
+    .hotspot:hover { background: rgba(0, 255, 255, 0.2); text-shadow: 0 0 10px #0ff; border-style: solid; color: #0ff;}
     
     #hs-top { top: 20px; left: 20%; width: 60%; height: 60px; }
     #hs-bottom { bottom: 100px; left: 20%; width: 60%; height: 60px; } 
@@ -80,7 +72,7 @@
     #tutorial-modal {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 5, 10, 0.95); border: 2px solid #0ff; box-shadow: 0 0 50px #0ff;
-      padding: 40px; display: none; width: 500px; text-align: center; pointer-events: auto;
+      padding: 40px; display: none; width: 500px; text-align: center; pointer-events: auto; border-radius: 5px;
     }
   </style>
 </head>
@@ -90,16 +82,16 @@
 
   <div id="ui-layer">
     <div id="boot-screen">
-      <h1>VOID RIDER // MASTER</h1>
-      <p>Centratura Biometrica Assoluta. Sistemi Audio OVERDRIVE Pronti.</p>
+      <h1>VOID RIDER // STUDIO</h1>
+      <p>Centratura HUD bloccata. Audio calibrato per ascolto PC (70% Vol).</p>
       <button class="btn" id="action-btn">INIZIALIZZA SISTEMA</button>
     </div>
 
     <div id="dashboard-controls">
       <div class="slider-container">
-        <span>SENSIBILITÀ MIC:</span>
-        <input type="range" id="mic-sens" min="0" max="30" value="12" step="1">
-        <span id="sens-val">+12dB</span>
+        <span>GAIN MICROFONO:</span>
+        <input type="range" id="mic-sens" min="0" max="24" value="6" step="1">
+        <span id="sens-val" style="min-width: 50px;">+6dB</span>
       </div>
     </div>
 
@@ -125,9 +117,9 @@
     let isRunning = false, stars = [];
     let customHelmetImg; 
 
+    // Punti della maschera per isolare il viso
     const silhouetteIndices = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
 
-    // --- CLASSE STELLE WARP SPEED ---
     class Star {
       constructor() { this.x = random(-width, width); this.y = random(-height, height); this.z = random(width); this.pz = this.z; }
       update(speed) { this.z -= speed; if (this.z < 1) { this.z = width; this.x = random(-width, width); this.y = random(-height, height); this.pz = this.z; } }
@@ -135,14 +127,11 @@
         let sx = map(this.x / this.z, 0, 1, 0, width); let sy = map(this.y / this.z, 0, 1, 0, height);
         let px = map(this.x / this.pz, 0, 1, 0, width); let py = map(this.y / this.pz, 0, 1, 0, height);
         this.pz = this.z;
-        stroke(200, 255, 255, map(this.z, 0, width, 255, 0)); strokeWeight(map(this.z, 0, width, 4, 0));
+        stroke(200, 255, 255, map(this.z, 0, width, 255, 0)); strokeWeight(map(this.z, 0, width, 3, 0));
         line(px, py, sx, sy); 
       }
     }
 
-    // ==========================================
-    // AREA DESIGNER: CARICAMENTO ASSET
-    // ==========================================
     function preload() {
       // INSERISCI QUI L'URL DEL TUO CASCHETTO (.PNG O .SVG)
       customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
@@ -151,10 +140,9 @@
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.position(0, 0); canvas.style('z-index', '10'); 
-      for (let i = 0; i < 600; i++) stars.push(new Star()); 
+      for (let i = 0; i < 400; i++) stars.push(new Star()); 
     }
 
-    // GESTIONE SLIDER SENSIBILITA'
     document.getElementById('mic-sens').addEventListener('input', (e) => {
       let val = e.target.value;
       document.getElementById('sens-val').innerText = '+' + val + 'dB';
@@ -168,11 +156,17 @@
         await Tone.start();
         const mic = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        // --- MOTORE AUDIO: OVERDRIVE ---
+        // ========================================================
+        // AUDIO STABILE: Gate Primario -> PreAmp -> Effetti -> Master (-8dB)
+        // ========================================================
         let initialGain = document.getElementById('mic-sens').value;
+        
+        // 1. Il Gate è il PRIMO scudo. Se non parli, il segnale muore qui. Nessun fischio.
+        noiseGate = new Tone.Gate(-40, 0.1); 
+        
+        // 2. Il PreAmp amplifica SOLO il segnale pulito che ha superato il gate.
         preAmp = new Tone.Volume(parseFloat(initialGain)); 
         
-        noiseGate = new Tone.Gate(-50, 0.1); 
         eq = new Tone.EQ3(0, 0, -5); 
         analyzer = new Tone.Waveform(256); 
         meter = new Tone.Meter();
@@ -180,17 +174,18 @@
         pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0; 
         ringMod = new Tone.FrequencyShifter(50); ringMod.wet.value = 0; 
         chebyshev = new Tone.Chebyshev(100); chebyshev.wet.value = 0; 
-        flangerEffect = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.98 }).start(); flangerEffect.wet.value = 0; 
+        flangerEffect = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.9 }).start(); flangerEffect.wet.value = 0; 
         bitcrusher = new Tone.BitCrusher(2); bitcrusher.wet.value = 0; 
         glitchDistortion = new Tone.Distortion(0.8); glitchDistortion.wet.value = 0;
-        spaceDelay = new Tone.FeedbackDelay("8n", 0.7); spaceDelay.wet.value = 0;
-        spaceReverb = new Tone.Freeverb({ roomSize: 0.98, dampening: 1000 }); spaceReverb.wet.value = 0;
+        spaceDelay = new Tone.FeedbackDelay("8n", 0.6); spaceDelay.wet.value = 0;
+        spaceReverb = new Tone.Freeverb({ roomSize: 0.9, dampening: 1500 }); spaceReverb.wet.value = 0;
 
-        let masterLimiter = new Tone.Limiter(0);
+        // 3. Output attenuato per sicurezza (-8dB) in modo da non innescare le casse
+        let masterLimiter = new Tone.Limiter(-8);
 
-        Tone.connect(mic, preAmp);
-        preAmp.connect(noiseGate);
-        noiseGate.chain(eq, analyzer, meter, pitchShift);
+        Tone.connect(mic, noiseGate); // Microfono -> Gate
+        noiseGate.connect(preAmp);    // Gate -> PreAmp
+        preAmp.chain(eq, analyzer, meter, pitchShift); // PreAmp -> Analisi -> Effetti
         pitchShift.chain(ringMod, bitcrusher, glitchDistortion, chebyshev, flangerEffect, spaceDelay, spaceReverb, masterLimiter, Tone.Destination);
 
         video = createCapture(VIDEO, () => {
@@ -208,23 +203,20 @@
 
     window.showTutorial = function(type) {
       const m = document.getElementById('tutorial-modal'); const t = document.getElementById('tut-title'); const d = document.getElementById('tut-desc');
-      if(type==='LEFT'){ t.innerText="MODULATORE AD ANELLO"; d.innerText="Spostati a SINISTRA. Genera una frequenza robotica/aliena a 50Hz."; } 
+      if(type==='LEFT'){ t.innerText="MODULATORE AD ANELLO"; d.innerText="Spostati a SINISTRA. Genera una frequenza aliena."; } 
       if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Spostati a DESTRA. Alza la voce a livelli disumani."; } 
       if(type==='UP'){ t.innerText="FLANGER PROPULSORI"; d.innerText="Guarda in ALTO. Turbina Jet con feedback al limite."; } 
-      if(type==='DOWN'){ t.innerText="BITCRUSHER GLITCH"; d.innerText="Guarda in BASSO. Annienta il segnale digitale saturandolo e riducendolo a 2-bit."; }
+      if(type==='DOWN'){ t.innerText="BITCRUSHER GLITCH"; d.innerText="Guarda in BASSO. Annienta il segnale riducendolo a 2-bit."; }
       m.style.display = 'block';
     }
 
     function draw() {
-      clear(); // LASCIA INTRAVEDERE IL CSS
+      clear(); 
       if (!isRunning) return;
 
       let db = meter.getValue();
       let vol = map(db, -25, -2, 0, 1, true);
 
-      // ==========================================
-      // CALCOLI BIOMETRICI E AUDIO
-      // ==========================================
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         let nX = (pts[1][0] - video.width/2) / (video.width/2); 
@@ -249,110 +241,6 @@
         cBit = lerp(cBit, tBit, 0.3); bitcrusher.wet.value = cBit; glitchDistortion.wet.value = cBit; 
       }
 
-      // --- STARFIELD ---
       push(); translate(width / 2, height / 2);
       let warpSpeed = map(cFlange, 0, 1, 2, 80); 
-      for (let s of stars) { s.update(warpSpeed); s.show(); }
-      pop();
-
-      // --- CAVI NEURALI ---
-      if (predictions.length > 0) drawNeuralNetwork();
-
-      // ==========================================
-      // RENDERING CENTRALE (OBLÒ E MASCHERA)
-      // ==========================================
-      push();
-      let wobbleX = sin(frameCount * 0.5) * cRing * 40; 
-      let wobbleY = cos(frameCount * 0.4) * cRing * 40;
-      let shake = vol > 0.85 ? random(-30, 30) : 0;
-      
-      translate(width/2 + shake + wobbleX, height/2 + shake + wobbleY);
-      
-      if (predictions.length > 0) {
-        let pts = predictions[0].scaledMesh;
-        
-        // [ ZONA DESIGNER: Oblò ]
-        let obloDiameter = 480;
-        stroke(0, 255, 255, 200); strokeWeight(6); fill(0, 5, 15, 180);
-        ellipse(0, 0, obloDiameter, obloDiameter); 
-
-        // Calcolo centro del viso esatto
-        let faceCX = (pts[1][0] - video.width/2); 
-        let faceCY = (pts[1][1] - video.height/2);
-
-        // MASKING
-        drawingContext.save(); 
-        beginShape();
-        vertex(-(pts[10][0] - video.width/2) + faceCX, (pts[10][1] - video.height/2) - 80 + faceCY); 
-        for (let i of silhouetteIndices) { 
-          vertex(-(pts[i][0] - video.width/2) + faceCX, (pts[i][1] - video.height/2) + faceCY); 
-        }
-        endShape(CLOSE);
-        drawingContext.clip(); 
-
-        // VIDEO
-        push(); scale(-1, 1); 
-        if (cBit > 0.2) { filter(POSTERIZE, 3); }
-
-        let rO = map(cPitch, 0, 24, 0, 60);
-        blendMode(SCREEN);
-        tint(255, 0, 50, 200); image(video, -video.width/2 - rO + faceCX, -video.height/2 + faceCY);
-        tint(0, 255, 255, 200); image(video, -video.width/2 + rO + faceCX, -video.height/2 + faceCY);
-        tint(255, 255, 255, 220); image(video, -video.width/2 + faceCX, -video.height/2 + faceCY);
-        blendMode(BLEND);
-        pop();
-        drawingContext.restore(); 
-
-        // [ ZONA DESIGNER: Elmetto Vettoriale ]
-        push();
-        let faceWidth = dist(pts[234][0], pts[234][1], pts[454][0], pts[454][1]);
-        imageMode(CENTER);
-        let helmetScaleMultiplier = 2.8; 
-        image(customHelmetImg, 0, 0, faceWidth * helmetScaleMultiplier, faceWidth * helmetScaleMultiplier);
-        pop();
-      }
-      pop();
-
-      // --- HUD TATTICO ---
-      drawCockpitHUD(db, vol);
-    }
-
-    function drawNeuralNetwork() {
-      push(); translate(width/2, height/2);
-      let col = color(0, 255, 255, 50); strokeWeight(5); noFill();
-      function stream(endX, endY, intensity, aCol) {
-        stroke(intensity > 0.1 ? aCol : col); bezier(0, 0, 0, 0, endX*0.5, endY*0.5, endX, endY);
-        if (intensity > 0.1) {
-          let t = (frameCount * 0.03 * (1 + intensity*2)) % 1; 
-          let px = lerp(0, endX, t); let py = lerp(0, endY, t);
-          noStroke(); fill(aCol); ellipse(px, py, 20, 20); fill(255); ellipse(px, py, 10, 10); noFill();
-        }
-      }
-      stream(0, -height/2, cFlange, color(255, 200, 0)); stream(0, height/2, cBit, color(0, 255, 50));
-      stream(-width/2, 0, cRing, color(255, 0, 255)); stream(width/2, 0, cPitch/24, color(0, 150, 255));
-      pop();
-    }
-
-    function drawCockpitHUD(db, vol) {
-      let c = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
-      
-      let wave = analyzer.getValue();
-      push(); translate(width/2, 100); stroke(c); strokeWeight(3); noFill();
-      beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -300, 300), wave[i] * 80); } endShape();
-      pop();
-
-      let rX = width/2 - 250, rY = height - 120; 
-      fill(10, 20, 40, 200); stroke(c); strokeWeight(2); rect(rX, rY, 500, 20);
-      noStroke(); fill(c); rect(rX, rY, map(vol, 0, 1, 0, 500, true), 20);
-      if (vol > 0.85) { fill(255, 0, 50, random(50, 100)); rect(0, 0, width, height); }
-
-      stroke(c); noFill(); strokeWeight(4);
-      line(30, 80, 30, 30); line(30, 30, 80, 30); line(width-80, 30, width-30, 30); line(width-30, 30, width-30, 80); 
-      line(30, height-80, 30, height-30); line(30, height-30, 80, height-30); line(width-80, height-30, width-30, height-30); line(width-30, height-30, width-30, height-80); 
-    }
-
-    window.emergencyMute = () => { Tone.Destination.mute = !Tone.Destination.mute; document.getElementById('panic').innerText = Tone.Destination.mute ? "⚠ SBLOCCA" : "⚠ TAGLIO MOTORI"; };
-    function windowResized() { resizeCanvas(windowWidth, windowHeight); }
-  </script>
-</body>
-</html>
+      for (
