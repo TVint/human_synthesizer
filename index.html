@@ -128,7 +128,7 @@
 
       // AUDIO ENGINE TATTICO
       let initialGain = document.getElementById('mic-sens').value;
-      noiseGate = new Tone.Gate(-25, 0.1); // Taglia i rumori di fondo se non parli
+      noiseGate = new Tone.Gate(-30, 0.1); // Taglia i rumori di fondo se non parli
       preAmp = new Tone.Volume(parseFloat(initialGain)); // L'utente amplifica a piacimento
       
       meter = new Tone.Meter();
