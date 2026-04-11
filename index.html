@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // DEV EDITION</title>
+  <title>VOID RIDER // DEV EDITION (OVERDRIVE)</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -16,69 +16,46 @@
       font-family: 'Share Tech Mono', monospace; overflow: hidden; 
     }
 
-    /* =========================================
-       LIVELLO 1: SFONDO GALASSIA ANIMATO (CSS)
-       ========================================= */
     #galaxy-bg {
       position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; z-index: 1;
-      /* SOSTITUISCI L'URL QUI SOTTO CON LA TUA IMMAGINE DELLA GALASSIA */
       background: url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2048&auto=format&fit=crop') center/cover no-repeat;
-      opacity: 0.6;
-      animation: galaxyDrift 60s infinite alternate linear;
-      pointer-events: none; /* Ignora i click */
+      opacity: 0.6; animation: galaxyDrift 60s infinite alternate linear; pointer-events: none;
     }
     @keyframes galaxyDrift {
       0% { transform: scale(1) rotate(0deg); }
       100% { transform: scale(1.1) rotate(2deg); }
     }
 
-    /* =========================================
-       LIVELLO 2: P5.JS CANVAS (Generato via JS)
-       Z-INDEX: 10
-       ========================================= */
+    #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; }
 
-    /* =========================================
-       LIVELLO 3: INTERFACCIA E CONTROLLI (HTML)
-       Z-INDEX: 100+
-       ========================================= */
-    #ui-layer {
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100;
-      pointer-events: none; /* Permette di cliccare gli elementi sotto se non colpisci un bottone */
-    }
-
-    /* --- SCHERMATA DI AVVIO --- */
     #boot-screen {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 5, 15, 0.9); border: 2px solid #0ff; padding: 40px; 
       text-align: center; width: 600px; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
-      pointer-events: auto; /* Riattiva i click qui dentro */
+      pointer-events: auto;
     }
     h1 { margin: 0 0 20px 0; font-size: 2.5rem; letter-spacing: 5px; border-bottom: 2px solid #0ff; padding-bottom: 10px; }
     .btn { padding: 15px 40px; font-size: 1.2rem; background: rgba(0, 255, 255, 0.1); color: #0ff; border: 1px solid #0ff; cursor: pointer; font-weight: bold; transition: 0.3s; }
     .btn:hover { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
 
-    /* --- EMERGENCY BUTTON --- */
     #panic {
       position: absolute; top: 30px; right: 30px; display: none; pointer-events: auto;
       background: rgba(255, 0, 50, 0.2); color: #ff0032; border: 2px solid #ff0032;
       padding: 15px 30px; cursor: pointer; font-weight: bold; font-size: 1.2rem; transition: 0.2s;
     }
 
-    /* --- HOTSPOTS ISPEZIONABILI --- */
-    /* Ora sono ben visibili nel DOM e puoi modificarli da ispeziona elemento */
     .hotspot {
       position: absolute; display: none; pointer-events: auto; cursor: pointer;
       background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.5);
       justify-content: center; align-items: center; color: rgba(0,255,255,0.8); font-weight: bold; font-size: 1.2rem; transition: 0.3s;
     }
-    .hotspot:hover { background: rgba(0, 255, 255, 0.3); background-color: rgba(0,255,255,0.2); text-shadow: 0 0 10px #0ff; }
+    .hotspot:hover { background: rgba(0, 255, 255, 0.3); text-shadow: 0 0 10px #0ff; }
     
     #hs-top { top: 20px; left: 20%; width: 60%; height: 60px; }
     #hs-bottom { bottom: 20px; left: 20%; width: 60%; height: 60px; }
     #hs-left { top: 10%; left: 20px; width: 80px; height: 80%; }
     #hs-right { top: 10%; right: 20px; width: 80px; height: 80%; }
 
-    /* --- MODALE TUTORIAL --- */
     #tutorial-modal {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 5, 10, 0.95); border: 2px solid #0ff; box-shadow: 0 0 50px #0ff;
@@ -91,16 +68,15 @@
   <div id="galaxy-bg"></div>
 
   <div id="ui-layer">
-    
     <div id="boot-screen">
       <h1>VOID RIDER // DEV</h1>
-      <p>Design Mode Ready. Audio Sensibility: MAX.</p>
+      <p>Design Mode Ready. LIMITATORI AUDIO RIMOSSI (+12dB Pre-Amp).</p>
       <button class="btn" id="action-btn">INIZIALIZZA SISTEMA</button>
     </div>
 
     <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">FLANGER</div>
-    <div id="hs-bottom" class="hotspot" onclick="showTutorial('DOWN')">BITCRUSHER</div>
-    <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">RING MOD</div>
+    <div id="hs-bottom" class="hotspot" onclick="showTutorial('DOWN')">BITCRUSH</div>
+    <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">ALIEN</div>
     <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')">PITCH UP</div>
     
     <button id="panic" onclick="window.emergencyMute()">⚠ TAGLIO MOTORI</button>
@@ -110,54 +86,57 @@
       <p id="tut-desc" style="color:#fff;">Descrizione...</p>
       <button class="btn" onclick="document.getElementById('tutorial-modal').style.display='none'">CHIUDI</button>
     </div>
-
   </div>
 
   <script>
-    // --- VARIABILI GLOBALI ---
     let video, facemesh, predictions = [];
-    let noiseGate, eq, pitchShift, ringMod, chebyshev, flangerEffect, bitcrusher, spaceDelay, spaceReverb, meter, analyzer;
+    let preAmp, noiseGate, eq, pitchShift, ringMod, chebyshev, flangerEffect, bitcrusher, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cRing = 0, cFlange = 0, cBit = 0, cSpace = 0;
     let isRunning = false;
-    let customHelmetImg; // Variabile per la tua immagine PNG/SVG
+    let customHelmetImg; 
 
-    // Silhouette per il Green Screen
     const silhouetteIndices = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
 
-    // ==========================================
-    // AREA DESIGNER: CARICAMENTO ASSET (PRELOAD)
-    // ==========================================
     function preload() {
-      // INSERISCI QUI L'URL DEL TUO CASCHETTO (.PNG O .SVG con sfondo trasparente)
-      // Per testare, ho messo un'immagine trasparente fittizia. Sostituisci il link tra gli apici.
       customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
     }
 
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.position(0, 0); 
-      canvas.style('z-index', '10'); // Posiziona il canvas sopra lo sfondo CSS e sotto la UI HTML
+      canvas.style('z-index', '10'); 
     }
 
     document.getElementById('action-btn').addEventListener('click', async () => {
       document.getElementById('boot-screen').style.display = 'none';
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false }, video: true });
         await Tone.start();
         const mic = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        // --- AUDIO ENGINE ESAGERATO ---
-        noiseGate = new Tone.Gate(-40, 0.1); eq = new Tone.EQ3(0, 0, -10); analyzer = new Tone.Waveform(256); meter = new Tone.Meter();
-        pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0; 
-        ringMod = new Tone.FrequencyShifter(400); ringMod.wet.value = 0; // Alieno aggressivo
-        chebyshev = new Tone.Chebyshev(50); chebyshev.wet.value = 0;
-        flangerEffect = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.95 }).start(); flangerEffect.wet.value = 0; // Jet potentissimo
-        bitcrusher = new Tone.BitCrusher(2); bitcrusher.wet.value = 0; 
-        spaceDelay = new Tone.FeedbackDelay("16n", 0.6); spaceDelay.wet.value = 0;
-        spaceReverb = new Tone.Freeverb({ roomSize: 0.95, dampening: 1000 }); spaceReverb.wet.value = 0;
+        // --- MOTORE AUDIO: OVERDRIVE ---
+        preAmp = new Tone.Volume(12); // IL SEGRETO: Boostiamo l'audio in ingresso di 12 decibel (enorme!)
+        noiseGate = new Tone.Gate(-55, 0.1); // Abbassato il gate per catturare suoni più deboli
+        eq = new Tone.EQ3(0, 0, -5); 
+        analyzer = new Tone.Waveform(256); 
+        meter = new Tone.Meter();
 
-        Tone.connect(mic, noiseGate); noiseGate.chain(eq, analyzer, meter, pitchShift);
-        pitchShift.chain(ringMod, bitcrusher, chebyshev, flangerEffect, spaceDelay, spaceReverb, new Tone.Volume(-10), new Tone.Limiter(-1), Tone.Destination);
+        pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0; 
+        ringMod = new Tone.FrequencyShifter(600); ringMod.wet.value = 0; // Ancora più acuto
+        chebyshev = new Tone.Chebyshev(100); chebyshev.wet.value = 0; // Più distorsione
+        flangerEffect = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.98 }).start(); flangerEffect.wet.value = 0; 
+        bitcrusher = new Tone.BitCrusher(1.5); bitcrusher.wet.value = 0; // Distruzione quasi totale
+        spaceDelay = new Tone.FeedbackDelay("8n", 0.7); spaceDelay.wet.value = 0;
+        spaceReverb = new Tone.Freeverb({ roomSize: 0.98, dampening: 1000 }); spaceReverb.wet.value = 0;
+
+        // Limiter di sicurezza a 0dB (volume massimo puro, senza riduzioni di Volume a -10 come prima)
+        let masterLimiter = new Tone.Limiter(0);
+
+        // Routing esplosivo
+        Tone.connect(mic, preAmp);
+        preAmp.connect(noiseGate);
+        noiseGate.chain(eq, analyzer, meter, pitchShift);
+        pitchShift.chain(ringMod, bitcrusher, chebyshev, flangerEffect, spaceDelay, spaceReverb, masterLimiter, Tone.Destination);
 
         video = createCapture(VIDEO, () => {
           facemesh = ml5.facemesh(video, () => {
@@ -173,69 +152,63 @@
 
     window.showTutorial = function(type) {
       const m = document.getElementById('tutorial-modal'); const t = document.getElementById('tut-title'); const d = document.getElementById('tut-desc');
-      if(type==='LEFT'){ t.innerText="MODULATORE AD ANELLO"; d.innerText="Spostati a SINISTRA. Crea frequenze aliene."; } 
-      if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Spostati a DESTRA. Alza il PITCH della voce."; } 
-      if(type==='UP'){ t.innerText="FLANGER PROPULSORI"; d.innerText="Guarda in ALTO. Attiva il jet flanger estremo."; } 
-      if(type==='DOWN'){ t.innerText="BITCRUSHER GLITCH"; d.innerText="Guarda in BASSO. Comprime i dati audio a 2-bit."; }
+      if(type==='LEFT'){ t.innerText="MODULATORE AD ANELLO"; d.innerText="Spostati a SINISTRA. Crea frequenze aliene estreme."; } 
+      if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Spostati a DESTRA. Alza la voce a livelli disumani."; } 
+      if(type==='UP'){ t.innerText="FLANGER PROPULSORI"; d.innerText="Guarda in ALTO. Turbina Jet con feedback al limite del Larsen."; } 
+      if(type==='DOWN'){ t.innerText="BITCRUSHER GLITCH"; d.innerText="Guarda in BASSO. Annienta il segnale a 1.5-bit."; }
       m.style.display = 'block';
     }
 
     function draw() {
-      clear(); // IMPORTANTE: Usa clear() invece di background() così lo sfondo galassia CSS si vede sotto!
+      clear(); 
       if (!isRunning) return;
 
       let vol = map(meter.getValue(), -25, -2, 0, 1, true);
 
-      // ==========================================
-      // CALIBRAZIONE SENSIBILITÀ ESTREMA
-      // ==========================================
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         let nX = (pts[1][0] - video.width/2) / (video.width/2); 
         let nY = (pts[1][1] - video.height/2) / (video.height/2);
 
-        // Bocca (Sensibilità alta)
+        // Bocca (Reattività estrema)
         let mDist = dist(pts[13][0], pts[13][1], pts[14][0], pts[14][1]);
-        cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.25);
+        cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.3);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
 
-        // Assi X/Y: Deadzone abbassata a 0.05 (basta muoversi del 5% per innescare l'effetto)
+        // X/Y
         let tPitch = 0, tRing = 0;
-        if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); // Sale velocissimo
+        if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); 
         else if (nX > 0.05) tRing = map(nX, 0.05, 0.4, 0, 1, true);
         
-        cPitch = lerp(cPitch, tPitch, 0.25); pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
-        cRing = lerp(cRing, tRing, 0.25); ringMod.wet.value = cRing;
+        cPitch = lerp(cPitch, tPitch, 0.3); pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
+        cRing = lerp(cRing, tRing, 0.3); ringMod.wet.value = cRing;
 
         let tFlange = 0, tBit = 0;
         if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true);
         else if (nY > 0.05) tBit = map(nY, 0.05, 0.4, 0, 1, true);
         
-        cFlange = lerp(cFlange, tFlange, 0.25); chebyshev.wet.value = cFlange; flangerEffect.wet.value = cFlange;
-        cBit = lerp(cBit, tBit, 0.25); bitcrusher.wet.value = cBit;
+        cFlange = lerp(cFlange, tFlange, 0.3); chebyshev.wet.value = cFlange; flangerEffect.wet.value = cFlange;
+        cBit = lerp(cBit, tBit, 0.3); bitcrusher.wet.value = cBit;
       }
 
-      // RENDER UTENTE E ASSET
       push();
-      let wobbleX = sin(frameCount * 0.5) * cRing * 40; // Wobble più forte
+      let wobbleX = sin(frameCount * 0.5) * cRing * 40; 
       let wobbleY = cos(frameCount * 0.4) * cRing * 40;
-      let shake = vol > 0.85 ? random(-25, 25) : 0;
+      let shake = vol > 0.85 ? random(-30, 30) : 0;
       
       translate(width/2 + shake + wobbleX, height/2 + shake + wobbleY);
       
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         
-        // MASKING GREEN SCREEN
         drawingContext.save(); 
         beginShape();
-        vertex(-(pts[10][0] - video.width/2), pts[10][1] - video.height/2 - 80); // Taglio più alto per i capelli
+        vertex(-(pts[10][0] - video.width/2), pts[10][1] - video.height/2 - 80); 
         for (let i of silhouetteIndices) { vertex(-(pts[i][0] - video.width/2), pts[i][1] - video.height/2); }
         endShape(CLOSE);
         drawingContext.clip(); 
 
         push(); scale(-1, 1); 
-        // Filtro Glitch Bitcrusher Visivo
         if (cBit > 0.2) { filter(POSTERIZE, 3); }
 
         let rO = map(cPitch, 0, 24, 0, 60);
@@ -247,46 +220,33 @@
         pop();
         drawingContext.restore(); 
 
-        // ==========================================
-        // AREA DESIGNER: DISEGNO ASSET VETTORIALE
-        // ==========================================
         push();
-        // Centro del viso
         let faceCX = (pts[1][0] - video.width/2); 
         let faceCY = (pts[1][1] - video.height/2);
-        // Calcolo dimensioni per ridimensionare l'SVG proporzionalmente
         let faceW = dist(pts[234][0], pts[234][1], pts[454][0], pts[454][1]);
-        
-        translate(-faceCX, faceCY); // Il file grafico seguirà la faccia
+        translate(-faceCX, faceCY); 
         imageMode(CENTER);
-        
-        // Disegna l'immagine vettoriale. 
-        // Moltiplica faceW per renderla più grande della faccia vera (es. faceW * 2.5)
         image(customHelmetImg, 0, 0, faceW * 2.5, faceW * 2.5);
         pop();
       }
       pop();
 
-      // HUD TATTICO
       drawCockpitHUD(meter.getValue(), vol);
     }
 
     function drawCockpitHUD(db, vol) {
       let c = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       
-      // HOLOGRAPHIC WAVEFORM
       let wave = analyzer.getValue();
       push(); translate(width/2, 100); stroke(c); strokeWeight(3); noFill();
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -300, 300), wave[i] * 80); } endShape();
       pop();
 
-      // VU-METER
       let rX = width/2 - 250, rY = height - 80;
       fill(10, 20, 40, 200); stroke(c); strokeWeight(2); rect(rX, rY, 500, 20);
       noStroke(); fill(c); rect(rX, rY, map(vol, 0, 1, 0, 500, true), 20);
       if (vol > 0.85) { fill(255, 0, 50, random(50, 100)); rect(0, 0, width, height); }
 
-      // DECORAZIONI ANGOLARI
       stroke(c); noFill(); strokeWeight(4);
       line(30, 80, 30, 30); line(30, 30, 80, 30); line(width-80, 30, width-30, 30); line(width-30, 30, width-30, 80); 
       line(30, height-80, 30, height-30); line(30, height-30, 80, height-30); line(width-80, height-30, width-30, height-30); line(width-30, height-30, width-30, height-80); 
