@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // MASTER TACTICAL</title>
+  <title>VOID RIDER - 01</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -128,7 +128,7 @@
 
       // AUDIO ENGINE TATTICO
       let initialGain = document.getElementById('mic-sens').value;
-      noiseGate = new Tone.Gate(-20, 0.1); // Taglia i rumori di fondo se non parli
+      noiseGate = new Tone.Gate(-30, 0.1); // Taglia i rumori di fondo se non parli
       preAmp = new Tone.Volume(parseFloat(initialGain)); // L'utente amplifica a piacimento
       
       meter = new Tone.Meter();
