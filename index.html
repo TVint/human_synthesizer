@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // ALIGNMENT & AUDIO FIX</title>
+  <title>VOID RIDER // BULLETPROOF UI</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -13,15 +13,17 @@
     
     * { box-sizing: border-box; }
 
-    body { 
-      margin: 0; padding: 0; background-color: #000; color: #0ff; 
-      font-family: 'Share Tech Mono', monospace; overflow: hidden; 
-      user-select: none;
+    /* Forziamo la viewport a essere immobile */
+    html, body { 
+      margin: 0; padding: 0; width: 100vw; height: 100vh; 
+      background-color: #000; color: #0ff; 
+      font-family: 'Share Tech Mono', monospace; 
+      overflow: hidden; user-select: none;
     }
 
-    /* SFONDO GALASSIA ROTANTE */
+    /* SFONDO GALASSIA (Fixed previene lo spostamento) */
     #galaxy-bg {
-      position: absolute; top: -20%; left: -20%; width: 140%; height: 140%; z-index: 1;
+      position: fixed; top: -20%; left: -20%; width: 140%; height: 140%; z-index: 1;
       background: url('https://images.pexels.com/photos/1341279/pexels-photo-1341279.jpeg') center/cover no-repeat;
       opacity: 0.6; animation: galaxySpin 150s infinite linear; pointer-events: none;
     }
@@ -30,17 +32,17 @@
       100% { transform: scale(1.5) rotate(360deg); }
     }
 
-    /* LAYER UI */
+    /* LAYER UI BLINDATO (Sopra il canvas che avrà z-index 10) */
     #ui-layer { 
-      position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
       z-index: 100; pointer-events: none; 
     }
 
-    /* SCHERMATA BOOT (Centrata Assoluta) */
+    /* SCHERMATA BOOT CENTRATA ASSOLUTA */
     #boot-screen {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 5, 15, 0.95); border: 2px solid #0ff; padding: 40px; 
-      text-align: center; width: 600px; max-width: 90%; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
+      text-align: center; width: 600px; max-width: 90vw; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
       border-radius: 5px; pointer-events: auto; transition: opacity 0.5s;
     }
     #boot-screen h1 { margin: 0 0 20px 0; font-size: 2.5rem; letter-spacing: 5px; border-bottom: 2px solid #0ff; padding-bottom: 10px; }
@@ -64,7 +66,7 @@
       justify-content: center; align-items: center; text-align: center; color: rgba(0,255,255,0.4); font-size: 1.2rem; font-weight: bold; transition: 0.3s;
     }
     .hotspot:hover { background: rgba(0, 255, 255, 0.2); border: 1px solid #0ff; color: #0ff; text-shadow: 0 0 10px #0ff; }
-    #hs-top { top: 20px; left: 50%; transform: translateX(-50%); width: 40%; height: 60px; }
+    #hs-top { top: 20px; left: 50%; transform: translateX(-50%); width: 400px; height: 60px; }
     #hs-left { top: 10%; left: 20px; width: 80px; height: 80%; }
     #hs-right { top: 10%; right: 20px; width: 80px; height: 80%; }
 
@@ -86,14 +88,13 @@
       position: absolute; display: none; top: 50%; transform: translateY(-50%);
       font-size: 1.1rem; line-height: 2; color: #0ff; text-shadow: 0 0 5px #0ff;
     }
-    /* Usa percentuali per evitare sovrapposizioni su schermi piccoli */
-    #telemetry-left { left: 8%; }
-    #system-right { right: 8%; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
+    #telemetry-left { left: 40px; }
+    #system-right { right: 40px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
 
     /* VU METER CENTRATO */
     #hud-bottom {
       position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-      display: none; flex-direction: column; align-items: center; gap: 10px; width: 500px; max-width: 80%;
+      display: none; flex-direction: column; align-items: center; gap: 10px; width: 500px; max-width: 80vw;
     }
     #vu-meter-bg { width: 100%; height: 15px; background: rgba(10, 20, 30, 0.8); border: 2px solid #0ff; border-radius: 2px; overflow: hidden; }
     #vu-meter-fill { width: 0%; height: 100%; background: #0ff; transition: width 0.1s, background 0.1s; }
@@ -111,7 +112,7 @@
   <div id="ui-layer">
     <div id="boot-screen">
       <h1>VOID RIDER</h1>
-      <p id="boot-status">Calibrazione Modulo Video & AI in corso...</p>
+      <p id="boot-status">Allineamento Modulo Video & AI in corso...</p>
       <button class="btn" id="action-btn" disabled>ATTENDERE...</button>
     </div>
 
@@ -131,7 +132,7 @@
 
     <div id="telemetry-left" class="hud-text">
       <div id="txt-grav">> GRAVITÀ_X: +0.0 ST</div>
-      <div id="txt-alien">> ALIEN_VOICE: 0%</div>
+      <div id="txt-alien">> ALIEN_MOD: 0%</div>
       <div id="txt-jet">> JET_FLANGE: 0%</div>
     </div>
 
@@ -161,13 +162,11 @@
   </div>
 
   <script>
-    // --- SEMAFORI ---
     let videoReady = false;
     let audioReady = false;
 
-    // --- VARIABILI GLOBALI ---
     let video, facemesh, predictions = [];
-    let preAmp, noiseGate, eq, pitchShift, ringModAlien, flanger, spaceDelay, spaceReverb, meter, analyzer;
+    let preAmp, noiseGate, pitchShift, ringModAlien, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cAlien = 0, cFlange = 0, cSpace = 0;
     let stars = [];
     let customHelmetImg; 
@@ -187,13 +186,18 @@
     }
 
     function preload() {
+      // Inserisci l'URL del tuo elmetto grafico qui
       customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
     }
 
-    // --- SETUP: SCARICA AI IN BACKGROUND ---
     function setup() {
+      // Imposta il canvas come layer fisso dietro l'HTML
       let canvas = createCanvas(windowWidth, windowHeight);
-      canvas.position(0, 0); canvas.style('z-index', '10'); 
+      canvas.style('position', 'fixed');
+      canvas.style('top', '0');
+      canvas.style('left', '0');
+      canvas.style('z-index', '10'); 
+
       for (let i = 0; i < 500; i++) stars.push(new Star());
 
       video = createCapture(VIDEO, () => {
@@ -221,7 +225,7 @@
       if(noiseGate) noiseGate.threshold = parseFloat(val);
     });
 
-    // --- AUDIO INIT: RIPRISTINATO IL MOTORE ALIENO ORIGINALE ---
+    // --- INIZIALIZZAZIONE AUDIO ---
     document.getElementById('action-btn').addEventListener('click', async () => {
       try {
         await Tone.start();
@@ -237,16 +241,11 @@
         meter = new Tone.Meter();
         analyzer = new Tone.Waveform(256); 
         
-        // Effetto Destra (Gravità - Pitch Shift pulito)
+        // IL MOTORE ORIGINALE (Morbido e stabile)
         pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0;
-        
-        // Effetto Sinistra (Alieno - Frequency Shifter morbido, non gracchiante)
         ringModAlien = new Tone.FrequencyShifter(150); ringModAlien.wet.value = 0;
-        
-        // Effetto Alto (Flanger)
         flanger = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.95 }).start(); flanger.wet.value = 0; 
         
-        // Spazio base
         spaceDelay = new Tone.FeedbackDelay("8n", 0.6); spaceDelay.wet.value = 0;
         spaceReverb = new Tone.Freeverb({ roomSize: 0.9, dampening: 1000 }); spaceReverb.wet.value = 0;
 
@@ -260,7 +259,6 @@
 
         audioReady = true;
 
-        // Rivela l'interfaccia
         document.getElementById('boot-screen').style.opacity = '0';
         setTimeout(() => document.getElementById('boot-screen').style.display = 'none', 500);
         
@@ -274,7 +272,7 @@
       } catch (err) { alert("Errore microfono: " + err.message); }
     });
 
-    // --- LOOP GRAFICO (Logica centratura ripristinata al 100%) ---
+    // --- LOOP GRAFICO (Logica matematica blindata per il centro) ---
     function draw() {
       clear(); 
       if (!videoReady || !audioReady) return;
@@ -301,82 +299,68 @@
         pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
         
         cAlien = lerp(cAlien, tAlien, 0.2); 
-        ringModAlien.wet.value = cAlien; // L'Alieno pulito
+        ringModAlien.wet.value = cAlien; 
 
         let tFlange = 0;
         if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true); 
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
       }
 
-      // Sfondo Stelle
       push(); translate(width/2, height/2);
       let warpSpeed = map(cFlange, 0, 1, 1, 80); 
       for (let s of stars) { s.update(warpSpeed); s.show(); }
       pop();
 
-      // Oscilloscopio
       let wave = analyzer.getValue();
       let cOsc = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       push(); translate(width/2, 100); stroke(cOsc); strokeWeight(2); noFill();
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -250, 250), wave[i] * 60); } endShape();
       fill(0, 255, 255, 10); noStroke(); ellipse(0, 0, 500, 40); pop();
 
-      // ===============================================
-      // CENTRATURA ASSOLUTA RIPRISTINATA MATEMATICAMENTE
-      // ===============================================
+      // IL CENTRO ASSOLUTO
       push();
       let shake = vol > 0.85 ? random(-15, 15) : 0;
-      translate(width/2 + shake, height/2 + shake); // Portiamo l'origine al centro dello schermo
+      translate(width/2 + shake, height/2 + shake);
 
       drawFluidSynapses();
 
-      // Oblò
       stroke(0, 255, 255, 180); strokeWeight(4); fill(0, 5, 15, 150);
       ellipse(0, 0, 480, 480); 
       
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         
-        // Prendo le coordinate assolute del naso dal video
+        // Logica matematica perfetta: posizioniamo l'immagine in modo che il naso cada su (0,0)
         let noseX = pts[1][0];
         let noseY = pts[1][1];
 
         drawingContext.save();
         beginShape();
-        // Calcolo i contorni sottraendo le coordinate del naso per ancorare tutto a (0,0)
         vertex(-(pts[10][0] - noseX), -(pts[10][1] - noseY) - 80); 
-        for (let i of silhouetteIndices) { 
-          vertex(-(pts[i][0] - noseX), -(pts[i][1] - noseY)); 
-        }
+        for (let i of silhouetteIndices) { vertex(-(pts[i][0] - noseX), -(pts[i][1] - noseY)); }
         endShape(CLOSE);
         drawingContext.clip();
 
-        push(); 
-        scale(-1, 1); // Specchio per non disorientare l'utente
-        
+        push(); scale(-1, 1); 
         let rO = map(cPitch, 0, 24, 0, 30);
         blendMode(SCREEN);
-        // Trascino l'immagine indietro di noseX, noseY, ancorando il naso perfettamente al centro!
+        // Trascino il video indietro per compensare le coordinate del naso
         tint(255, 0, 50, 200); image(video, -noseX - rO, -noseY);
         tint(0, 255, 255, 200); image(video, -noseX + rO, -noseY);
         tint(255, 255, 255, 255); image(video, -noseX, -noseY);
         blendMode(BLEND);
         pop();
-        
         drawingContext.restore(); 
 
-        // Elmetto disegnato perfettamente a (0,0)
         let faceW = dist(pts[234][0], pts[234][1], pts[454][0], pts[454][1]) * 1.6; 
         drawHelmet(faceW);
         
-        // Reticolo centrale fisso
         stroke(0, 255, 255, 80); strokeWeight(1);
         line(-20, 0, 20, 0); line(0, -20, 0, 20); noFill(); ellipse(0, 0, 30, 30);
       }
       pop();
     }
 
-    // --- FUNZIONI DI SUPPORTO ---
     function aggiornaInterfacciaHTML(db, vol) {
       document.getElementById('txt-grav').innerText = `> GRAVITÀ_X: +${cPitch.toFixed(1)} ST`;
       document.getElementById('txt-alien').innerText = `> ALIEN_MOD: ${(cAlien*100).toFixed(0)}%`;
@@ -420,14 +404,13 @@
           fill(255); ellipse(px, py, 6, 6); noFill();
         }
       }
-      streamFluid(0, -height/2, cFlange, color(255, 200, 0)); // Su
-      streamFluid(-width/2, 0, cAlien, color(255, 0, 255));  // Sinistra
-      streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); // Destra
+      streamFluid(0, -height/2, cFlange, color(255, 200, 0)); 
+      streamFluid(-width/2, 0, cAlien, color(255, 0, 255));  
+      streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); 
     }
 
     function drawHelmet(w) {
-      push();
-      // Non serve traslare perché l'origine è già il centro perfetto
+      push(); 
       stroke(0, 255, 255, 150); noFill(); strokeWeight(3);
       let h = w; 
       arc(0, -h/4, w*0.9, h*0.5, PI, 0); 
