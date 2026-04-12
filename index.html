@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // ROCK SOLID BUILD</title>
+  <title>VOID RIDER // BULLETPROOF BLUE EDITION</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -37,13 +37,13 @@
 
     #ui-dimmer {
       position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: rgba(0, 5, 15, 0.85); z-index: 90; opacity: 0; pointer-events: none;
+      background: rgba(0, 5, 20, 0.85); z-index: 90; opacity: 0; pointer-events: none;
       transition: opacity 0.4s ease; backdrop-filter: blur(4px);
     }
 
     #boot-screen {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      background: rgba(0, 5, 15, 0.95); border: 2px solid #0ff; padding: 40px; 
+      background: rgba(0, 10, 25, 0.95); border: 2px solid #0ff; padding: 40px; 
       text-align: center; width: 600px; max-width: 90vw; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
       border-radius: 5px; pointer-events: auto; transition: opacity 0.5s; z-index: 1000;
     }
@@ -53,6 +53,7 @@
     .btn:hover:not(:disabled) { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
     .btn:disabled { opacity: 0.5; border-color: #555; color: #aaa; cursor: not-allowed; background: transparent; }
 
+    /* LAYOUT 150px */
     #panic {
       position: absolute; top: 30px; right: 150px; display: none; pointer-events: auto;
       background: rgba(255, 0, 50, 0.2); color: #fff; border: 2px solid #ff0032; text-shadow: 0 0 8px #ff0032;
@@ -81,6 +82,7 @@
     #telemetry-left { left: 150px; }
     #system-right { right: 150px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
 
+    /* HOTSPOTS CON TESTI RUOTATI */
     .hotspot {
       position: absolute; display: none; pointer-events: auto; cursor: pointer;
       background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
@@ -108,7 +110,7 @@
 
     #tutorial-modal { 
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); 
-      background: rgba(0, 5, 10, 0.95); border: 2px solid #0ff; box-shadow: 0 0 50px #0ff; 
+      background: rgba(0, 10, 25, 0.95); border: 2px solid #0ff; box-shadow: 0 0 50px #0ff; 
       padding: 40px; z-index: 100; display: none; opacity: 0; width: 500px; text-align: center; 
       border-radius: 5px; pointer-events: auto; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
@@ -267,6 +269,7 @@
         }
       }
       show() {
+        // Ombra nativa tollerata e leggera per il bagliore
         drawingContext.shadowBlur = 10;
         drawingContext.shadowColor = 'rgba(0, 255, 255, 0.8)';
         strokeWeight(this.thickness);
@@ -303,7 +306,7 @@
         });
         facemesh.on("predict", r => predictions = r);
       });
-      video.hide();
+      video.hide(); // Nasconde l'elemento DOM nativo, renderizziamo sul canvas
     }
 
     document.getElementById('mic-gain').addEventListener('input', (e) => {
@@ -377,6 +380,7 @@
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
       }
 
+      // --- RENDERING COSMO ---
       push(); translate(width/2, height/2);
       for(let p of pulsars) p.show();
       let warpSpeed = map(cFlange, 0, 1, 1, 120); 
@@ -384,6 +388,7 @@
       for (let c of comets) { c.update(); c.show(); }
       pop();
 
+      // Oscilloscopio Inferiore
       let wave = analyzer.getValue(); let cOsc = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       push(); translate(width/2, 100); stroke(cOsc); strokeWeight(2); noFill();
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -250, 250), wave[i] * 60); } endShape();
@@ -395,6 +400,7 @@
 
       drawFluidSynapses();
 
+      // CREAZIONE OBLÒ OTTAGONALE
       drawingContext.save();
       beginShape(); 
       vertex(-HUD_W/2 + 30, -HUD_H/2); vertex(HUD_W/2 - 30, -HUD_H/2);
@@ -407,7 +413,8 @@
       drawCockpitBackground(cFlange);
 
       // ==========================================
-      // TRACKING CAMERA & SCIFI FILTER (NATIVE CANVAS)
+      // TRACKING CAMERA & FILTRO BLU SCI-FI (BULLETPROOF)
+      // Nessun blendMode, nessun tint. Rendering solido.
       // ==========================================
       let scaleF = 1.7; 
       let pW = 640 * scaleF; 
@@ -432,34 +439,37 @@
       translate(cameraDX, cameraDY); 
       scale(-1, 1); 
 
-      // 1. Render Video Base Puro
+      // 1. Render Video Base
       image(video, -pW/2, -pH/2, pW, pH);
 
-      // 2. Glitch Safemode (API NATIVE: Nessun crash della maschera di ritaglio)
+      // 2. Glitch "Hardware Safe"
+      // Disegna due copie sfalsate con un overlay colorato per simulare l'aberrazione
       let rO = map(cPitch, 0, 24, 0, 30);
       if(rO > 0.5) {
-        drawingContext.globalAlpha = 0.5;
-        drawingContext.globalCompositeOperation = 'screen';
+        drawingContext.globalAlpha = 0.4;
         
+        // Ghost Rosso
         image(video, -pW/2 - rO, -pH/2, pW, pH); 
-        image(video, -pW/2 + rO, -pH/2 + (rO*0.2), pW, pH);
+        fill(255, 0, 50, 100); noStroke();
+        rect(-pW/2 - rO, -pH/2, pW, pH);
+        
+        // Ghost Ciano
+        image(video, -pW/2 + rO, -pH/2, pW, pH);
+        fill(0, 255, 255, 100); noStroke();
+        rect(-pW/2 + rO, -pH/2, pW, pH);
         
         drawingContext.globalAlpha = 1.0;
-        drawingContext.globalCompositeOperation = 'source-over';
       }
 
-      // 3. Mappa Sfumatura Cyberpunk (API NATIVE)
-      drawingContext.globalCompositeOperation = 'multiply';
+      // 3. NUOVO FILTRO BLU / AZZURRO SCI-FI
       let grad = drawingContext.createLinearGradient(-pW/2, -pH/2, pW/2, pH/2);
-      grad.addColorStop(0, 'rgba(0, 255, 255, 0.85)'); 
-      grad.addColorStop(1, 'rgba(255, 0, 255, 0.85)'); 
+      grad.addColorStop(0, 'rgba(0, 10, 40, 0.7)'); // Blu scuro profondo
+      grad.addColorStop(1, 'rgba(0, 180, 255, 0.45)'); // Azzurro luminoso
       drawingContext.fillStyle = grad;
       noStroke();
       rect(-pW/2, -pH/2, pW, pH);
-      
-      // RESET DEL COMPOSITE OPERATION FONDAMENTALE
-      drawingContext.globalCompositeOperation = 'source-over';
 
+      // --- MASCHERA NEURALE SUL VOLTO ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         
@@ -479,20 +489,21 @@
       }
       pop(); 
 
+      // Scanlines
       stroke(0, 255, 200, 25);
       strokeWeight(1.5);
       for(let i = -HUD_H/2; i < HUD_H/2; i+= 5) { line(-HUD_W/2, i, HUD_W/2, i); }
 
       drawCockpitForeground(cPitch, cVocoder, vol);
       
-      drawingContext.restore(); 
+      drawingContext.restore(); // CHIUSURA OBLÒ
       drawHelmetOverlay(HUD_W, HUD_H);
       pop();
     }
 
     function drawCockpitBackground(flangeParam) {
       push();
-      background(5, 10, 20, 120); 
+      background(0, 10, 30, 150); 
       let horizon = 50; 
       let t = frameCount * (1 + flangeParam * 3); 
       strokeWeight(2); stroke(0, 255, 255, 50);
