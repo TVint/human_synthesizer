@@ -35,7 +35,6 @@
       z-index: 100; pointer-events: none; 
     }
 
-    /* Dimmer Layer */
     #ui-dimmer {
       position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(0, 5, 15, 0.85); z-index: 90; opacity: 0; pointer-events: none;
@@ -54,7 +53,6 @@
     .btn:hover:not(:disabled) { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
     .btn:disabled { opacity: 0.5; border-color: #555; color: #aaa; cursor: not-allowed; background: transparent; }
 
-    /* LAYOUT A 150px */
     #panic {
       position: absolute; top: 30px; right: 150px; display: none; pointer-events: auto;
       background: rgba(255, 0, 50, 0.2); color: #fff; border: 2px solid #ff0032; text-shadow: 0 0 8px #ff0032;
@@ -83,7 +81,6 @@
     #telemetry-left { left: 150px; }
     #system-right { right: 150px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
 
-    /* HOTSPOTS */
     .hotspot {
       position: absolute; display: none; pointer-events: auto; cursor: pointer;
       background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
@@ -242,13 +239,11 @@
     class Comet {
       constructor() { this.reset(); this.x = random(-width, width); this.y = random(-height, height); }
       reset() {
-        // Nasce sempre ai bordi esterni, a 360 gradi
         let angle = random(TWO_PI);
         let radius = max(width, height) * 1.5;
         this.x = cos(angle) * radius;
         this.y = sin(angle) * radius;
 
-        // Punta verso il centro, ma con una certa variazione
         let targetX = random(-width/4, width/4);
         let targetY = random(-height/4, height/4);
 
@@ -410,7 +405,7 @@
       drawCockpitBackground(cFlange);
 
       // ==========================================
-      // TRACKING CAMERA & MAPPA SFUMATURA SCI-FI
+      // TRACKING CAMERA & SCIFI FILTER (SAFE RENDER)
       // ==========================================
       let scaleF = 1.7; 
       let pW = 640 * scaleF; 
@@ -435,34 +430,31 @@
       translate(cameraDX, cameraDY); 
       scale(-1, 1); 
 
-      // Render Video Base
-      drawingContext.filter = 'grayscale(100%) contrast(1.5) brightness(0.8)';
+      // 1. Render Video Base Puro (Nessun filtro CSS per evitare crash WebKit/Canvas)
       image(video, -pW/2, -pH/2, pW, pH);
-      drawingContext.filter = 'none';
 
-      // --- EFFETTO GLITCH SICURO (Niente tint, niente crash di memoria) ---
+      // 2. Glitch Safemode (Usa blendMode e offset, non fa crashare la GPU)
       let rO = map(cPitch, 0, 24, 0, 30);
       if(rO > 0.5) {
+        blendMode(SCREEN);
         drawingContext.globalAlpha = 0.5;
-        drawingContext.globalCompositeOperation = 'screen';
-        
         image(video, -pW/2 - rO, -pH/2, pW, pH); 
-        image(video, -pW/2 + rO, -pH/2 + (rO*0.2), pW, pH);
-        
+        image(video, -pW/2 + rO, -pH/2, pW, pH);
         drawingContext.globalAlpha = 1.0;
-        drawingContext.globalCompositeOperation = 'source-over';
+        blendMode(BLEND);
       }
 
-      // --- MAPPA SFUMATURA CYBERPUNK ---
-      // Viene applicata sopra il glitch, colorando tutto in ciano e magenta
-      blendMode(OVERLAY);
+      // 3. Mappa Sfumatura Cyberpunk (BlendMode Hardware-Safe)
+      blendMode(MULTIPLY); // Scurisce e satura brutalmente i colori sottostanti
       let grad = drawingContext.createLinearGradient(-pW/2, -pH/2, pW/2, pH/2);
-      grad.addColorStop(0, 'rgba(0, 255, 255, 1)'); 
-      grad.addColorStop(1, 'rgba(255, 0, 255, 1)'); 
+      grad.addColorStop(0, 'rgba(0, 255, 255, 0.85)'); 
+      grad.addColorStop(1, 'rgba(255, 0, 255, 0.85)'); 
       drawingContext.fillStyle = grad;
+      noStroke();
       rect(-pW/2, -pH/2, pW, pH);
-      blendMode(BLEND); 
+      blendMode(BLEND);
 
+      // --- MASCHERA NEURALE SUL VOLTO ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         
