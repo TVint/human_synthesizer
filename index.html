@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // DEV DESIGN EDITION</title>
+  <title>VOID RIDER // 3-CORE EDITION</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -18,28 +18,31 @@
     }
 
     /* =========================================
-       LIVELLO 1: SFONDO (Modifica qui l'immagine)
+       LIVELLO 1: SFONDO GALASSIA ROTANTE
        ========================================= */
     #galaxy-bg {
-      position: absolute; top: -10%; left: -10%; width: 120%; height: 120%; z-index: 1;
-      background: url('https://images.unsplash.com/photo-1462331940025-496dfbfc7564?q=80&w=2048&auto=format&fit=crop') center/cover no-repeat;
-      opacity: 0.6; animation: galaxyDrift 60s infinite alternate linear; pointer-events: none;
+      position: absolute; top: -20%; left: -20%; width: 140%; height: 140%; z-index: 1;
+      background: url('https://images.pexels.com/photos/1341279/pexels-photo-1341279.jpeg') center/cover no-repeat;
+      opacity: 0.6; 
+      animation: galaxySpin 150s infinite linear; 
+      pointer-events: none;
     }
-    @keyframes galaxyDrift {
-      0% { transform: scale(1) rotate(0deg); }
-      100% { transform: scale(1.1) rotate(2deg); }
+    /* La scala a 1.5 previene la comparsa di bordi vuoti durante la rotazione */
+    @keyframes galaxySpin {
+      0% { transform: scale(1.5) rotate(0deg); }
+      100% { transform: scale(1.5) rotate(360deg); }
     }
 
     /* =========================================
-       LIVELLO 2: P5.JS CANVAS (Z-Index 10, generato da JS)
+       LIVELLO 2: P5.JS CANVAS (Z-Index 10)
        ========================================= */
 
     /* =========================================
-       LIVELLO 3: UI HTML & CSS (Il tuo parco giochi)
+       LIVELLO 3: UI HTML & CSS
        ========================================= */
     #ui-layer { 
       position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
-      z-index: 100; pointer-events: none; /* Permette il click through sul canvas */
+      z-index: 100; pointer-events: none; 
     }
 
     /* --- SCHERMATA BOOT --- */
@@ -69,9 +72,9 @@
     }
     .hotspot:hover { background: rgba(0, 255, 255, 0.2); border: 1px solid #0ff; color: #0ff; text-shadow: 0 0 10px #0ff; }
     #hs-top { top: 20px; left: 20%; width: 60%; height: 60px; }
-    #hs-bottom { bottom: 20px; left: 20%; width: 60%; height: 60px; }
     #hs-left { top: 10%; left: 20px; width: 80px; height: 80%; }
     #hs-right { top: 10%; right: 20px; width: 80px; height: 80%; }
+    /* Eliminato #hs-bottom */
 
     /* --- PANNELLO SVILUPPATORE (Audio Calibrator) --- */
     #dev-panel {
@@ -86,7 +89,7 @@
     input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 8px; background: #0ff; cursor: pointer; margin-top: -6px; }
     input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(0, 255, 255, 0.3); }
 
-    /* --- HUD: TELEMETRIA E STATISTICHE (I testi ai lati) --- */
+    /* --- HUD: TELEMETRIA E STATISTICHE --- */
     .hud-text {
       position: absolute; display: none; top: 50%; transform: translateY(-50%);
       font-size: 1.2rem; line-height: 2; color: #0ff; text-shadow: 0 0 5px #0ff;
@@ -103,7 +106,7 @@
     #vu-meter-fill { width: 0%; height: 100%; background: #0ff; transition: width 0.1s, background 0.1s; }
     #hud-status { font-size: 1.2rem; font-weight: bold; letter-spacing: 2px; transition: color 0.2s;}
 
-    /* Effetto Schermo Rosso quando in allarme (Aggiunto/Rimosso via JS) */
+    /* Effetto Schermo Rosso quando in allarme */
     .alert-state { background: rgba(255, 0, 50, 0.3) !important; box-shadow: inset 0 0 100px rgba(255,0,50,0.5); }
 
     /* --- TUTORIAL MODAL --- */
@@ -120,8 +123,8 @@
   <div id="ui-layer">
     
     <div id="boot-screen">
-      <h1>VOID RIDER // DOM EDIT</h1>
-      <p>Interfaccia disaccoppiata dal Canvas. Calibrazione audio attiva.</p>
+      <h1>VOID RIDER // 3-CORE</h1>
+      <p>Sistema semplificato a 3 Moduli. Gate e Sensibilità calibrati.</p>
       <button class="btn" id="action-btn">ESTABLISH LINK</button>
     </div>
 
@@ -129,22 +132,21 @@
       <h3>AUDIO SETUP</h3>
       <div class="slider-group">
         <label>GAIN MIC:</label>
-        <input type="range" id="mic-gain" min="0" max="30" value="12" step="1">
-        <span id="gain-val" style="width:40px;">+12dB</span>
+        <input type="range" id="mic-gain" min="0" max="10" value="2" step="1">
+        <span id="gain-val" style="width:40px;">+2dB</span>
       </div>
       <div class="slider-group">
         <label>NOISE GATE:</label>
-        <input type="range" id="noise-gate" min="-80" max="-20" value="-45" step="1">
-        <span id="gate-val" style="width:40px;">-45dB</span>
+        <input type="range" id="noise-gate" min="-60" max="-10" value="-30" step="1">
+        <span id="gate-val" style="width:40px;">-30dB</span>
       </div>
     </div>
 
     <div id="telemetry-left" class="hud-text">
       <div id="txt-grav">> GRAVITÀ_X: +0.0 ST</div>
-      <div id="txt-alien">> ALIEN_MOD: 0%</div>
+      <div id="txt-alien">> ALIEN_VOICE: 0%</div>
       <div id="txt-jet">> JET_FLANGE: 0%</div>
-      <div id="txt-crush">> CRUSH_DATA: 0%</div>
-    </div>
+      </div>
 
     <div id="system-right" class="hud-text">
       <div id="txt-mem">SYS.MEM: [0x8A7B2]</div>
@@ -160,7 +162,6 @@
 
     <button id="panic" onclick="window.emergencyMute()">⚠ TAGLIO MOTORI</button>
     <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[ FLANGER ]</div>
-    <div id="hs-bottom" class="hotspot" onclick="showTutorial('DOWN')">[ CRUSH ]</div>
     <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">[ ALIEN ]</div>
     <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')">[ PITCH ]</div>
 
@@ -173,10 +174,10 @@
   </div>
 
   <script>
-    // --- VARIABILI GLOBALI (Logica Core) ---
+    // --- VARIABILI GLOBALI ---
     let video, facemesh, predictions = [];
-    let preAmp, noiseGate, eq, pitchShift, ringMod, flanger, bitcrusher, spaceDelay, spaceReverb, meter, analyzer;
-    let cPitch = 0, cRing = 0, cFlange = 0, cBit = 0, cSpace = 0;
+    let preAmp, noiseGate, eq, pitchShiftUp, alienPitch, alienTremolo, flanger, spaceDelay, spaceReverb, meter, analyzer;
+    let cPitch = 0, cAlien = 0, cFlange = 0, cSpace = 0;
     let isRunning = false, stars = [];
     let customHelmetImg; 
 
@@ -195,17 +196,17 @@
     }
 
     function preload() {
-      // IL TUO ASSET VETTORIALE QUI (Lascia sfondo trasparente)
+      // IL TUO ASSET VETTORIALE QUI
       customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
     }
 
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
-      canvas.position(0, 0); canvas.style('z-index', '10'); // Sotto la UI, sopra il CSS
+      canvas.position(0, 0); canvas.style('z-index', '10'); 
       for (let i = 0; i < 600; i++) stars.push(new Star());
     }
 
-    // --- EVENT LISTENER DEGLI SLIDER SVILUPPATORE ---
+    // --- SLIDER EVENT LISTENERS ---
     document.getElementById('mic-gain').addEventListener('input', (e) => {
       let val = e.target.value;
       document.getElementById('gain-val').innerText = '+' + val + 'dB';
@@ -234,25 +235,30 @@
       meter = new Tone.Meter();
       analyzer = new Tone.Waveform(256); 
       
-      pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0;
-      ringMod = new Tone.FrequencyShifter(50); ringMod.wet.value = 0; 
-      flanger = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.95 }).start(); flanger.wet.value = 0; 
-      bitcrusher = new Tone.BitCrusher(2); bitcrusher.wet.value = 0; 
+      // DESTRA: Pitch in alto
+      pitchShiftUp = new Tone.PitchShift(0); pitchShiftUp.windowSize = 0.05; pitchShiftUp.wet.value = 0;
       
+      // SINISTRA (Nuovo Alieno): Pitch in basso (-8 ST) + Tremolo Veloce (12Hz)
+      alienPitch = new Tone.PitchShift(-8); alienPitch.windowSize = 0.1; alienPitch.wet.value = 0;
+      alienTremolo = new Tone.Tremolo(12, 0.9).start(); alienTremolo.wet.value = 0;
+      
+      // SU: Flanger
+      flanger = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.95 }).start(); flanger.wet.value = 0; 
+      
+      // BOCCA: Spazio
       spaceDelay = new Tone.FeedbackDelay("8n", 0.6); spaceDelay.wet.value = 0;
       spaceReverb = new Tone.Freeverb({ roomSize: 0.9, dampening: 1000 }); spaceReverb.wet.value = 0;
 
-      let masterLimiter = new Tone.Limiter(-5); 
+      let masterLimiter = new Tone.Limiter(-8); // Limiter più stringente
 
       Tone.connect(mic, noiseGate);
       noiseGate.connect(preAmp);
-      preAmp.chain(analyzer, meter, pitchShift); 
-      pitchShift.chain(ringMod, bitcrusher, flanger, spaceDelay, spaceReverb, masterLimiter, Tone.Destination);
+      preAmp.chain(analyzer, meter, pitchShiftUp); 
+      pitchShiftUp.chain(alienPitch, alienTremolo, flanger, spaceDelay, spaceReverb, masterLimiter, Tone.Destination);
 
       video = createCapture(VIDEO, () => {
         facemesh = ml5.facemesh(video, () => {
           isRunning = true;
-          // Rivela gli elementi HTML
           document.getElementById('panic').style.display = 'block';
           document.getElementById('dev-panel').style.display = 'flex';
           document.getElementById('telemetry-left').style.display = 'block';
@@ -265,15 +271,14 @@
       video.hide();
     });
 
-    // --- LOOP GRAFICO (Solo Logica Visuale e Calcoli) ---
+    // --- LOOP GRAFICO ---
     function draw() {
-      clear(); // Importante: pulisce il canvas per far vedere il Div Galaxy sotto
+      clear(); // Canvas trasparente per far vedere CSS Galaxy
       if (!isRunning) return;
 
       let db = meter.getValue();
       let vol = map(db, -25, -2, 0, 1, true);
 
-      // --- AGGIORNAMENTO DOM HTML (Testi e VU Meter) ---
       aggiornaInterfacciaHTML(db, vol);
 
       // --- MAPPING BIOMETRICO ---
@@ -286,44 +291,46 @@
         cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.2);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
 
-        let tPitch = 0, tRing = 0;
-        if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); 
-        else if (nX > 0.05) tRing = map(nX, 0.05, 0.4, 0, 1, true); 
+        let tPitch = 0, tAlien = 0;
+        if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); // Destra
+        else if (nX > 0.05) tAlien = map(nX, 0.05, 0.4, 0, 1, true); // Sinistra (Alieno)
         
-        cPitch = lerp(cPitch, tPitch, 0.2); pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
-        cRing = lerp(cRing, tRing, 0.2); ringMod.wet.value = cRing;
+        cPitch = lerp(cPitch, tPitch, 0.2); 
+        pitchShiftUp.pitch = cPitch; 
+        pitchShiftUp.wet.value = cPitch > 1 ? 1 : 0;
+        
+        cAlien = lerp(cAlien, tAlien, 0.2); 
+        alienPitch.wet.value = cAlien;
+        alienTremolo.wet.value = cAlien;
 
-        let tFlange = 0, tBit = 0;
-        if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true);
-        else if (nY > 0.05) tBit = map(nY, 0.05, 0.4, 0, 1, true);
+        let tFlange = 0;
+        if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true); // Su
         
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
-        cBit = lerp(cBit, tBit, 0.2); bitcrusher.wet.value = cBit;
       }
 
-      // --- DISEGNO ELEMENTI SU CANVAS ---
       // 1. Stelle
       push(); translate(width/2, height/2);
       let warpSpeed = map(cFlange, 0, 1, 1, 80); 
       for (let s of stars) { s.update(warpSpeed); s.show(); }
       pop();
 
-      // 2. Oscilloscopio Olografico (In alto, disegnato via p5)
+      // 2. Oscilloscopio
       let wave = analyzer.getValue();
       let cOsc = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       push(); translate(width/2, 100); stroke(cOsc); strokeWeight(2); noFill();
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -250, 250), wave[i] * 60); } endShape();
       fill(0, 255, 255, 10); noStroke(); ellipse(0, 0, 500, 40); pop();
 
-      // Centro Schermo
+      // Centro
       push();
       let shake = vol > 0.85 ? random(-15, 15) : 0;
       translate(width/2 + shake, height/2 + shake);
 
-      // 3. Cavi Fluidi
+      // 3. Cavi Fluidi (ora solo 3)
       drawFluidSynapses();
 
-      // 4. Oblò Centrale e Maschera Facciale
+      // 4. Oblò e Maschera
       stroke(0, 255, 255, 180); strokeWeight(4); fill(0, 5, 15, 150);
       ellipse(0, 0, 480, 480); 
       
@@ -340,8 +347,6 @@
         drawingContext.clip();
 
         push(); scale(-1, 1); 
-        if(cBit > 0.2) { filter(POSTERIZE, 3); }
-        
         let rO = map(cPitch, 0, 24, 0, 30);
         blendMode(SCREEN);
         tint(255, 0, 50, 200); image(video, -video.width/2 - rO, -video.height/2);
@@ -353,24 +358,20 @@
 
         drawHelmet(pts, faceCX, faceCY, faceW, faceH);
         
-        // Reticolo
         stroke(0, 255, 255, 80); strokeWeight(1);
         line(-20, 0, 20, 0); line(0, -20, 0, 20); noFill(); ellipse(0, 0, 30, 30);
       }
       pop();
     }
 
-    // --- FUNZIONE PER AGGIORNARE IL DOM HTML ---
+    // --- AGGIORNA DOM ---
     function aggiornaInterfacciaHTML(db, vol) {
-      // Aggiorna Testi
       document.getElementById('txt-grav').innerText = `> GRAVITÀ_X: +${cPitch.toFixed(1)} ST`;
-      document.getElementById('txt-alien').innerText = `> ALIEN_MOD: ${(cRing*100).toFixed(0)}%`;
+      document.getElementById('txt-alien').innerText = `> ALIEN_VOICE: ${(cAlien*100).toFixed(0)}%`;
       document.getElementById('txt-jet').innerText = `> JET_FLANGE: ${(cFlange*100).toFixed(0)}%`;
-      document.getElementById('txt-crush').innerText = `> CRUSH_DATA: ${(cBit*100).toFixed(0)}%`;
       
       document.getElementById('txt-peak').innerText = `MIC.PEAK: [${db.toFixed(1)} dB]`;
 
-      // Aggiorna VU-Meter CSS
       let vuFill = document.getElementById('vu-meter-fill');
       let statusText = document.getElementById('hud-status');
       let isCritical = vol > 0.85;
@@ -390,6 +391,7 @@
       }
     }
 
+    // --- CAVI NEURALI (Solo 3) ---
     function drawFluidSynapses() {
       let baseCol = color(0, 255, 255, 40);
       strokeWeight(4); noFill();
@@ -408,15 +410,13 @@
           fill(255); ellipse(px, py, 6, 6); noFill();
         }
       }
-      streamFluid(0, -height/2, cFlange, color(255, 200, 0));
-      streamFluid(0, height/2, cBit, color(0, 255, 50));
-      streamFluid(-width/2, 0, cRing, color(255, 0, 255));
-      streamFluid(width/2, 0, cPitch/24, color(0, 150, 255));
+      streamFluid(0, -height/2, cFlange, color(255, 200, 0)); // Su
+      streamFluid(-width/2, 0, cAlien, color(255, 0, 255));  // Sinistra
+      streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); // Destra
     }
 
     function drawHelmet(pts, cx, cy, w, h) {
-      push();
-      translate(-cx, cy); 
+      push(); translate(-cx, cy); 
       stroke(0, 255, 255, 150); noFill(); strokeWeight(3);
       arc(0, -h/4, w*0.9, h*0.5, PI, 0); 
       line(-w*0.45, -h/4, -w*0.4, h/4); line(w*0.45, -h/4, w*0.4, h/4);
@@ -424,19 +424,15 @@
       if (cSpace > 0.1) {
         noStroke(); fill(0, 255, 255, cSpace * 100); ellipse(0, h/4, 80 * cSpace, 80 * cSpace);
       }
-      
-      // Asset vettoriale custom
-      imageMode(CENTER);
-      image(customHelmetImg, 0, 0, w * 2.8, w * 2.8);
+      imageMode(CENTER); image(customHelmetImg, 0, 0, w * 2.8, w * 2.8);
       pop();
     }
 
     window.showTutorial = function(type) {
       const m = document.getElementById('tutorial-modal'); const t = document.getElementById('tut-title'); const d = document.getElementById('tut-desc');
-      if(type==='LEFT') { t.innerText="MODULATORE AD ANELLO"; d.innerText="Sposta la testa a SINISTRA. Crea un'onda aliena robotica."; }
+      if(type==='LEFT') { t.innerText="MODULAZIONE ALIENA"; d.innerText="Sposta la testa a SINISTRA. Pitch down estremo combinato a tremolo meccanico."; }
       if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Sposta la testa a DESTRA. Elimina la gravità vocale."; }
-      if(type==='UP')   { t.innerText="WARP FLANGER"; d.innerText="Guarda in ALTO. Innesca il reattore al plasma (Larsen Warning)."; }
-      if(type==='DOWN') { t.innerText="BITCRUSHER 2-BIT"; d.innerText="Guarda in BASSO. Frammentazione digitale critica del segnale."; }
+      if(type==='UP')   { t.innerText="WARP FLANGER"; d.innerText="Guarda in ALTO. Innesca il reattore al plasma."; }
       m.style.display = 'block';
     }
 
