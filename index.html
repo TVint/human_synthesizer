@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // STABLE MASTER BUILD</title>
+  <title>VOID RIDER // ROCK SOLID BUILD</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -370,7 +370,9 @@
         if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); else if (nX > 0.15) tVocoder = map(nX, 0.15, 0.4, 0, 1, true); 
         if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true); 
         
-        cPitch = lerp(cPitch, tPitch, 0.2); pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
+        cPitch = lerp(cPitch, tPitch, 0.2); 
+        pitchShift.pitch = cPitch; 
+        pitchShift.wet.value = cPitch > 1 ? 1 : 0;
         cVocoder = lerp(cVocoder, tVocoder, 0.2); vocoderWah.wet.value = cVocoder; vocoderBit.wet.value = cVocoder; 
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
       }
@@ -405,7 +407,7 @@
       drawCockpitBackground(cFlange);
 
       // ==========================================
-      // TRACKING CAMERA & SCIFI FILTER (SAFE RENDER)
+      // TRACKING CAMERA & SCIFI FILTER (NATIVE CANVAS)
       // ==========================================
       let scaleF = 1.7; 
       let pW = 640 * scaleF; 
@@ -430,31 +432,34 @@
       translate(cameraDX, cameraDY); 
       scale(-1, 1); 
 
-      // 1. Render Video Base Puro (Nessun filtro CSS per evitare crash WebKit/Canvas)
+      // 1. Render Video Base Puro
       image(video, -pW/2, -pH/2, pW, pH);
 
-      // 2. Glitch Safemode (Usa blendMode e offset, non fa crashare la GPU)
+      // 2. Glitch Safemode (API NATIVE: Nessun crash della maschera di ritaglio)
       let rO = map(cPitch, 0, 24, 0, 30);
       if(rO > 0.5) {
-        blendMode(SCREEN);
         drawingContext.globalAlpha = 0.5;
+        drawingContext.globalCompositeOperation = 'screen';
+        
         image(video, -pW/2 - rO, -pH/2, pW, pH); 
-        image(video, -pW/2 + rO, -pH/2, pW, pH);
+        image(video, -pW/2 + rO, -pH/2 + (rO*0.2), pW, pH);
+        
         drawingContext.globalAlpha = 1.0;
-        blendMode(BLEND);
+        drawingContext.globalCompositeOperation = 'source-over';
       }
 
-      // 3. Mappa Sfumatura Cyberpunk (BlendMode Hardware-Safe)
-      blendMode(MULTIPLY); // Scurisce e satura brutalmente i colori sottostanti
+      // 3. Mappa Sfumatura Cyberpunk (API NATIVE)
+      drawingContext.globalCompositeOperation = 'multiply';
       let grad = drawingContext.createLinearGradient(-pW/2, -pH/2, pW/2, pH/2);
       grad.addColorStop(0, 'rgba(0, 255, 255, 0.85)'); 
       grad.addColorStop(1, 'rgba(255, 0, 255, 0.85)'); 
       drawingContext.fillStyle = grad;
       noStroke();
       rect(-pW/2, -pH/2, pW, pH);
-      blendMode(BLEND);
+      
+      // RESET DEL COMPOSITE OPERATION FONDAMENTALE
+      drawingContext.globalCompositeOperation = 'source-over';
 
-      // --- MASCHERA NEURALE SUL VOLTO ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         
@@ -479,6 +484,7 @@
       for(let i = -HUD_H/2; i < HUD_H/2; i+= 5) { line(-HUD_W/2, i, HUD_W/2, i); }
 
       drawCockpitForeground(cPitch, cVocoder, vol);
+      
       drawingContext.restore(); 
       drawHelmetOverlay(HUD_W, HUD_H);
       pop();
