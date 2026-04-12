@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // ROCK-SOLID EDITION</title>
+  <title>VOID RIDER // ALIGNMENT & AUDIO FIX</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -11,15 +11,15 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
     
+    * { box-sizing: border-box; }
+
     body { 
       margin: 0; padding: 0; background-color: #000; color: #0ff; 
       font-family: 'Share Tech Mono', monospace; overflow: hidden; 
       user-select: none;
     }
 
-    /* =========================================
-       SFONDO GALASSIA ROTANTE
-       ========================================= */
+    /* SFONDO GALASSIA ROTANTE */
     #galaxy-bg {
       position: absolute; top: -20%; left: -20%; width: 140%; height: 140%; z-index: 1;
       background: url('https://images.pexels.com/photos/1341279/pexels-photo-1341279.jpeg') center/cover no-repeat;
@@ -30,15 +30,17 @@
       100% { transform: scale(1.5) rotate(360deg); }
     }
 
-    /* =========================================
-       UI HTML & CSS
-       ========================================= */
-    #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; pointer-events: none; }
+    /* LAYER UI */
+    #ui-layer { 
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+      z-index: 100; pointer-events: none; 
+    }
 
+    /* SCHERMATA BOOT (Centrata Assoluta) */
     #boot-screen {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 5, 15, 0.95); border: 2px solid #0ff; padding: 40px; 
-      text-align: center; width: 600px; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
+      text-align: center; width: 600px; max-width: 90%; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
       border-radius: 5px; pointer-events: auto; transition: opacity 0.5s;
     }
     #boot-screen h1 { margin: 0 0 20px 0; font-size: 2.5rem; letter-spacing: 5px; border-bottom: 2px solid #0ff; padding-bottom: 10px; }
@@ -47,6 +49,7 @@
     .btn:hover:not(:disabled) { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
     .btn:disabled { opacity: 0.5; border-color: #555; color: #aaa; cursor: not-allowed; background: transparent; }
 
+    /* PANNELLO EMERGENZA */
     #panic {
       position: absolute; top: 30px; right: 30px; display: none; pointer-events: auto;
       background: rgba(255, 0, 50, 0.2); color: #ff0032; border: 2px solid #ff0032;
@@ -54,16 +57,18 @@
     }
     #panic:hover { background: #ff0032; color: #000; box-shadow: 0 0 30px #ff0032; }
 
+    /* HOTSPOTS */
     .hotspot {
       position: absolute; display: none; pointer-events: auto; cursor: pointer;
       background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
       justify-content: center; align-items: center; text-align: center; color: rgba(0,255,255,0.4); font-size: 1.2rem; font-weight: bold; transition: 0.3s;
     }
     .hotspot:hover { background: rgba(0, 255, 255, 0.2); border: 1px solid #0ff; color: #0ff; text-shadow: 0 0 10px #0ff; }
-    #hs-top { top: 20px; left: 20%; width: 60%; height: 60px; }
+    #hs-top { top: 20px; left: 50%; transform: translateX(-50%); width: 40%; height: 60px; }
     #hs-left { top: 10%; left: 20px; width: 80px; height: 80%; }
     #hs-right { top: 10%; right: 20px; width: 80px; height: 80%; }
 
+    /* PANNELLO AUDIO SVILUPPATORE */
     #dev-panel {
       position: absolute; bottom: 30px; left: 30px; display: none;
       background: rgba(0, 10, 25, 0.9); border: 1px solid #0ff; padding: 20px;
@@ -76,14 +81,23 @@
     input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 8px; background: #0ff; cursor: pointer; margin-top: -6px; }
     input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(0, 255, 255, 0.3); }
 
-    .hud-text { position: absolute; display: none; top: 50%; transform: translateY(-50%); font-size: 1.2rem; line-height: 2; color: #0ff; text-shadow: 0 0 5px #0ff; }
-    #telemetry-left { left: 120px; }
-    #system-right { right: 120px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
+    /* TELEMETRIA HUD */
+    .hud-text {
+      position: absolute; display: none; top: 50%; transform: translateY(-50%);
+      font-size: 1.1rem; line-height: 2; color: #0ff; text-shadow: 0 0 5px #0ff;
+    }
+    /* Usa percentuali per evitare sovrapposizioni su schermi piccoli */
+    #telemetry-left { left: 8%; }
+    #system-right { right: 8%; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
 
-    #hud-bottom { position: absolute; bottom: 100px; left: 50%; transform: translateX(-50%); display: none; flex-direction: column; align-items: center; gap: 10px; width: 600px; }
+    /* VU METER CENTRATO */
+    #hud-bottom {
+      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+      display: none; flex-direction: column; align-items: center; gap: 10px; width: 500px; max-width: 80%;
+    }
     #vu-meter-bg { width: 100%; height: 15px; background: rgba(10, 20, 30, 0.8); border: 2px solid #0ff; border-radius: 2px; overflow: hidden; }
     #vu-meter-fill { width: 0%; height: 100%; background: #0ff; transition: width 0.1s, background 0.1s; }
-    #hud-status { font-size: 1.2rem; font-weight: bold; letter-spacing: 2px; transition: color 0.2s;}
+    #hud-status { font-size: 1.1rem; font-weight: bold; letter-spacing: 2px; transition: color 0.2s;}
 
     .alert-state { background: rgba(255, 0, 50, 0.3) !important; box-shadow: inset 0 0 100px rgba(255,0,50,0.5); }
 
@@ -134,6 +148,7 @@
     </div>
 
     <button id="panic" onclick="window.emergencyMute()">⚠ TAGLIO MOTORI</button>
+    
     <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[ FLANGER ]</div>
     <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">[ ALIEN ]</div>
     <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')">[ PITCH ]</div>
@@ -146,13 +161,13 @@
   </div>
 
   <script>
-    // --- SEMAFORI DI SICUREZZA ---
+    // --- SEMAFORI ---
     let videoReady = false;
     let audioReady = false;
 
-    // --- VARIABILI ---
+    // --- VARIABILI GLOBALI ---
     let video, facemesh, predictions = [];
-    let preAmp, noiseGate, eq, pitchShiftUp, alienPitch, flanger, spaceDelay, spaceReverb, meter, analyzer;
+    let preAmp, noiseGate, eq, pitchShift, ringModAlien, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cAlien = 0, cFlange = 0, cSpace = 0;
     let stars = [];
     let customHelmetImg; 
@@ -172,22 +187,19 @@
     }
 
     function preload() {
-      // INSERISCI QUI IL TUO ELMETTO (Mantiene sfondo trasparente)
       customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
     }
 
-    // --- FASE 1: INIZIALIZZAZIONE SICURA P5 E WEBCAM ---
+    // --- SETUP: SCARICA AI IN BACKGROUND ---
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.position(0, 0); canvas.style('z-index', '10'); 
-      for (let i = 0; i < 600; i++) stars.push(new Star());
+      for (let i = 0; i < 500; i++) stars.push(new Star());
 
-      // Crea il video dentro al setup (Previene l'errore "createCapture is not defined")
       video = createCapture(VIDEO, () => {
         facemesh = ml5.facemesh(video, () => {
-          // IL MODELLO AI È PRONTO! Sblocchiamo l'interfaccia.
           videoReady = true;
-          document.getElementById('boot-status').innerText = "Sistemi Pronti. In attesa di consenso Audio.";
+          document.getElementById('boot-status').innerText = "AI Visiva Operativa. In attesa di consenso Audio.";
           let btn = document.getElementById('action-btn');
           btn.innerText = "ESTABLISH LINK";
           btn.disabled = false;
@@ -197,7 +209,6 @@
       video.hide();
     }
 
-    // --- CONTROLLI SLIDER ---
     document.getElementById('mic-gain').addEventListener('input', (e) => {
       let val = e.target.value;
       document.getElementById('gain-val').innerText = '+' + val + 'dB';
@@ -210,7 +221,7 @@
       if(noiseGate) noiseGate.threshold = parseFloat(val);
     });
 
-    // --- FASE 2: INIZIALIZZAZIONE AUDIO AL CLICK ---
+    // --- AUDIO INIT: RIPRISTINATO IL MOTORE ALIENO ORIGINALE ---
     document.getElementById('action-btn').addEventListener('click', async () => {
       try {
         await Tone.start();
@@ -226,28 +237,27 @@
         meter = new Tone.Meter();
         analyzer = new Tone.Waveform(256); 
         
-        // DESTRA: Pitch in alto
-        pitchShiftUp = new Tone.PitchShift(0); pitchShiftUp.windowSize = 0.05; pitchShiftUp.wet.value = 0;
+        // Effetto Destra (Gravità - Pitch Shift pulito)
+        pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0;
         
-        // SINISTRA: L'Alieno (-12 Semitoni per una vera voce mostruosa)
-        alienPitch = new Tone.PitchShift(-12); alienPitch.windowSize = 0.05; alienPitch.wet.value = 0;
+        // Effetto Sinistra (Alieno - Frequency Shifter morbido, non gracchiante)
+        ringModAlien = new Tone.FrequencyShifter(150); ringModAlien.wet.value = 0;
         
-        // SU: Flanger
+        // Effetto Alto (Flanger)
         flanger = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.95 }).start(); flanger.wet.value = 0; 
         
-        // BOCCA: Spazio
+        // Spazio base
         spaceDelay = new Tone.FeedbackDelay("8n", 0.6); spaceDelay.wet.value = 0;
         spaceReverb = new Tone.Freeverb({ roomSize: 0.9, dampening: 1000 }); spaceReverb.wet.value = 0;
 
-        let masterLimiter = new Tone.Limiter(-8); 
+        let masterLimiter = new Tone.Limiter(-5); 
 
         // Routing
         Tone.connect(mic, noiseGate);
         noiseGate.connect(preAmp);
-        preAmp.chain(analyzer, meter, pitchShiftUp); 
-        pitchShiftUp.chain(alienPitch, flanger, spaceDelay, spaceReverb, masterLimiter, Tone.Destination);
+        preAmp.chain(analyzer, meter, pitchShift); 
+        pitchShift.chain(ringModAlien, flanger, spaceDelay, spaceReverb, masterLimiter, Tone.Destination);
 
-        // L'AUDIO È PRONTO! Diamo il semaforo verde alla grafica
         audioReady = true;
 
         // Rivela l'interfaccia
@@ -261,13 +271,12 @@
         document.getElementById('hud-bottom').style.display = 'flex';
         document.querySelectorAll('.hotspot').forEach(el => el.style.display = 'flex');
 
-      } catch (err) { alert("Errore inizializzazione microfono: " + err.message); }
+      } catch (err) { alert("Errore microfono: " + err.message); }
     });
 
-    // --- FASE 3: LOOP GRAFICO SICURO ---
+    // --- LOOP GRAFICO (Logica centratura ripristinata al 100%) ---
     function draw() {
       clear(); 
-      // Guardia di sicurezza: la grafica parte SOLO se audio e video sono caricati
       if (!videoReady || !audioReady) return;
 
       let db = meter.getValue();
@@ -289,70 +298,88 @@
         else if (nX > 0.05) tAlien = map(nX, 0.05, 0.4, 0, 1, true); 
         
         cPitch = lerp(cPitch, tPitch, 0.2); 
-        pitchShiftUp.pitch = cPitch; pitchShiftUp.wet.value = cPitch > 1 ? 1 : 0;
+        pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
         
         cAlien = lerp(cAlien, tAlien, 0.2); 
-        alienPitch.wet.value = cAlien; // La mutazione aliena segue la testa
+        ringModAlien.wet.value = cAlien; // L'Alieno pulito
 
         let tFlange = 0;
         if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true); 
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
       }
 
+      // Sfondo Stelle
       push(); translate(width/2, height/2);
       let warpSpeed = map(cFlange, 0, 1, 1, 80); 
       for (let s of stars) { s.update(warpSpeed); s.show(); }
       pop();
 
+      // Oscilloscopio
       let wave = analyzer.getValue();
       let cOsc = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       push(); translate(width/2, 100); stroke(cOsc); strokeWeight(2); noFill();
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -250, 250), wave[i] * 60); } endShape();
       fill(0, 255, 255, 10); noStroke(); ellipse(0, 0, 500, 40); pop();
 
+      // ===============================================
+      // CENTRATURA ASSOLUTA RIPRISTINATA MATEMATICAMENTE
+      // ===============================================
       push();
       let shake = vol > 0.85 ? random(-15, 15) : 0;
-      translate(width/2 + shake, height/2 + shake);
+      translate(width/2 + shake, height/2 + shake); // Portiamo l'origine al centro dello schermo
 
       drawFluidSynapses();
 
+      // Oblò
       stroke(0, 255, 255, 180); strokeWeight(4); fill(0, 5, 15, 150);
       ellipse(0, 0, 480, 480); 
       
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
+        
+        // Prendo le coordinate assolute del naso dal video
+        let noseX = pts[1][0];
+        let noseY = pts[1][1];
+
         drawingContext.save();
         beginShape();
-        let faceW = dist(pts[234][0], pts[234][1], pts[454][0], pts[454][1]) * 1.6; 
-        let faceH = dist(pts[10][0], pts[10][1], pts[152][0], pts[152][1]) * 1.6; 
-        let faceCX = (pts[1][0] - video.width/2); 
-        let faceCY = (pts[1][1] - video.height/2);
-        
-        ellipse(-faceCX, faceCY, faceW, faceH); 
+        // Calcolo i contorni sottraendo le coordinate del naso per ancorare tutto a (0,0)
+        vertex(-(pts[10][0] - noseX), -(pts[10][1] - noseY) - 80); 
+        for (let i of silhouetteIndices) { 
+          vertex(-(pts[i][0] - noseX), -(pts[i][1] - noseY)); 
+        }
+        endShape(CLOSE);
         drawingContext.clip();
 
-        push(); scale(-1, 1); 
+        push(); 
+        scale(-1, 1); // Specchio per non disorientare l'utente
+        
         let rO = map(cPitch, 0, 24, 0, 30);
         blendMode(SCREEN);
-        tint(255, 0, 50, 200); image(video, -video.width/2 - rO, -video.height/2);
-        tint(0, 255, 255, 200); image(video, -video.width/2 + rO, -video.height/2);
-        tint(255, 255, 255, 255); image(video, -video.width/2, -video.height/2);
+        // Trascino l'immagine indietro di noseX, noseY, ancorando il naso perfettamente al centro!
+        tint(255, 0, 50, 200); image(video, -noseX - rO, -noseY);
+        tint(0, 255, 255, 200); image(video, -noseX + rO, -noseY);
+        tint(255, 255, 255, 255); image(video, -noseX, -noseY);
         blendMode(BLEND);
         pop();
+        
         drawingContext.restore(); 
 
-        drawHelmet(pts, faceCX, faceCY, faceW, faceH);
+        // Elmetto disegnato perfettamente a (0,0)
+        let faceW = dist(pts[234][0], pts[234][1], pts[454][0], pts[454][1]) * 1.6; 
+        drawHelmet(faceW);
         
+        // Reticolo centrale fisso
         stroke(0, 255, 255, 80); strokeWeight(1);
         line(-20, 0, 20, 0); line(0, -20, 0, 20); noFill(); ellipse(0, 0, 30, 30);
       }
       pop();
     }
 
-    // --- FUNZIONI SECONDARIE ---
+    // --- FUNZIONI DI SUPPORTO ---
     function aggiornaInterfacciaHTML(db, vol) {
       document.getElementById('txt-grav').innerText = `> GRAVITÀ_X: +${cPitch.toFixed(1)} ST`;
-      document.getElementById('txt-alien').innerText = `> ALIEN_VOICE: ${(cAlien*100).toFixed(0)}%`;
+      document.getElementById('txt-alien').innerText = `> ALIEN_MOD: ${(cAlien*100).toFixed(0)}%`;
       document.getElementById('txt-jet').innerText = `> JET_FLANGE: ${(cFlange*100).toFixed(0)}%`;
       document.getElementById('txt-peak').innerText = `MIC.PEAK: [${db.toFixed(1)} dB]`;
 
@@ -398,22 +425,24 @@
       streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); // Destra
     }
 
-    function drawHelmet(pts, cx, cy, w, h) {
-      push(); translate(-cx, cy); 
+    function drawHelmet(w) {
+      push();
+      // Non serve traslare perché l'origine è già il centro perfetto
       stroke(0, 255, 255, 150); noFill(); strokeWeight(3);
+      let h = w; 
       arc(0, -h/4, w*0.9, h*0.5, PI, 0); 
       line(-w*0.45, -h/4, -w*0.4, h/4); line(w*0.45, -h/4, w*0.4, h/4);
       strokeWeight(1); for(let i=-20; i<=20; i+=10) { line(i, h/3, i, h/2); }
       if (cSpace > 0.1) {
         noStroke(); fill(0, 255, 255, cSpace * 100); ellipse(0, h/4, 80 * cSpace, 80 * cSpace);
       }
-      imageMode(CENTER); image(customHelmetImg, 0, 0, w * 2.8, w * 2.8);
+      imageMode(CENTER); image(customHelmetImg, 0, 0, w * 1.8, w * 1.8);
       pop();
     }
 
     window.showTutorial = function(type) {
       const m = document.getElementById('tutorial-modal'); const t = document.getElementById('tut-title'); const d = document.getElementById('tut-desc');
-      if(type==='LEFT') { t.innerText="MODULAZIONE ALIENA"; d.innerText="Sposta la testa a SINISTRA. Attiva Pitch Shift Oscuro (-12 ST)."; }
+      if(type==='LEFT') { t.innerText="MODULAZIONE ALIENA"; d.innerText="Sposta la testa a SINISTRA. Attiva il modulatore ad anello spaziale."; }
       if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Sposta la testa a DESTRA. Elimina la gravità vocale."; }
       if(type==='UP')   { t.innerText="WARP FLANGER"; d.innerText="Guarda in ALTO. Innesca il reattore al plasma."; }
       m.style.display = 'block';
