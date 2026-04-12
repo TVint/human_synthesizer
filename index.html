@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // VOCODER EDITION</title>
+  <title>VOID RIDER // VOCODER CALIBRATO</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -30,6 +30,11 @@
       100% { transform: scale(1.5) rotate(360deg); }
     }
 
+    /* =============================================================
+      UI LAYER - AREA WEB DESIGN 
+      Tutto ciò che è qui dentro è puro HTML/CSS manipolabile
+      =============================================================
+    */
     #ui-layer { 
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
       z-index: 100; pointer-events: none; 
@@ -157,7 +162,6 @@
     let audioReady = false;
 
     let video, facemesh, predictions = [];
-    // Modificate variabili per Vocoder
     let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
     let stars = [];
@@ -186,6 +190,7 @@
       canvas.style('position', 'fixed');
       canvas.style('top', '0');
       canvas.style('left', '0');
+      // Il canvas grafico resta sotto la UI Web
       canvas.style('z-index', '10'); 
 
       for (let i = 0; i < 500; i++) stars.push(new Star());
@@ -233,22 +238,20 @@
         
         pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0;
         
-        // --- IL NUOVO MOTORE VOCODER ---
-        // 1. Diamo un effetto "elettrico" e ronzante simile al dente di sega
+        // --- VOCODER ENGINE RICALIBRATO ---
         vocoderBit = new Tone.BitCrusher(4); 
         vocoderBit.wet.value = 0;
         
-        // 2. Il cuore del Vocoder: un envelope follower che anima il filtro con la tua bocca
         vocoderWah = new Tone.AutoWah({
           baseFrequency: 100,
           octaves: 5,
-          sensitivity: 0,
-          Q: 5, // Risonanza alta per esaltare l'effetto "parlato" sintetico
-          gain: 10,
-          follower: { attack: 0.05, release: 0.2 }
+          sensitivity: 10, // Aumentato per richiedere più volume
+          Q: 3,            // Abbassato per evitare fischi taglienti
+          gain: 5,         // Ridotto il volume interno per prevenire Larsen
+          follower: { attack: 0.1, release: 0.5 } // Reso molto più fluido
         });
         vocoderWah.wet.value = 0;
-        // -------------------------------
+        // ----------------------------------
 
         flanger = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.65 }).start(); flanger.wet.value = 0; 
         
@@ -257,7 +260,7 @@
 
         let masterLimiter = new Tone.Limiter(-5); 
 
-        // Routing aggiornato per includere vocoderBit e vocoderWah
+        // Routing 
         Tone.connect(mic, noiseGate);
         noiseGate.connect(preAmp);
         preAmp.connect(antiLarsenEQ);
@@ -302,8 +305,11 @@
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
 
         let tPitch = 0, tVocoder = 0;
+        
+        // --- DEADZONE ALLARGATA PER IL VOCODER ---
         if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); 
-        else if (nX > 0.05) tVocoder = map(nX, 0.05, 0.4, 0, 1, true); 
+        // Ora richiede una deviazione del 15% (0.15) prima di accendersi, invece del 5%
+        else if (nX > 0.15) tVocoder = map(nX, 0.15, 0.4, 0, 1, true); 
         
         cPitch = lerp(cPitch, tPitch, 0.2); 
         pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
@@ -414,7 +420,7 @@
         }
       }
       streamFluid(0, -height/2, cFlange, color(255, 200, 0)); 
-      streamFluid(-width/2, 0, cVocoder, color(255, 0, 255)); // Mantenuto il fucsia per il Vocoder
+      streamFluid(-width/2, 0, cVocoder, color(255, 0, 255)); 
       streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); 
     }
 
