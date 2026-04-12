@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // MASTER BUILD</title>
+  <title>VOID RIDER // ULTIMATE BUILD</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -147,6 +147,7 @@
 
     <div id="telemetry-left" class="hud-text">
       <div id="txt-grav">> GRAVITÀ_X: +0.0 ST</div>
+      <div id="txt-echo">> ECHO_SPACE: 0%</div>
       <div id="txt-vocoder">> VOCODER_SYNTH: 0%</div>
       <div id="txt-jet">> JET_FLANGE: 0%</div>
     </div>
@@ -184,6 +185,10 @@
     let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
     
+    // Smooth Camera Variables
+    let cameraDX = 0;
+    let cameraDY = 0;
+
     // SISTEMA PARTICELLARE COSMO VIVO
     let stars = [];
     let pulsars = [];
@@ -206,22 +211,74 @@
       }
     }
 
+    // UPDATE: Pulsar realistiche. Piccoli puntini bianchi che ogni tanto fanno un 'flare'.
     class Pulsar {
-      constructor() { this.x = random(-width/2, width/2); this.y = random(-height/2, height/2); this.baseSize = random(3, 8); this.speed = random(0.01, 0.05); this.offset = random(100); }
+      constructor() { 
+        this.x = random(-width/2, width/2); 
+        this.y = random(-height/2, height/2); 
+        this.baseSize = random(1, 2.5); 
+        this.speed = random(0.01, 0.03); 
+        this.offset = random(TWO_PI); 
+      }
       show() {
-        let s = this.baseSize + sin(frameCount * this.speed + this.offset) * (this.baseSize * 0.8);
-        noStroke(); fill(0, 150, 255, 60); ellipse(this.x, this.y, s * 4, s * 4); 
-        fill(255, 200, 255, 150); ellipse(this.x, this.y, s, s);
+        let cycle = sin(frameCount * this.speed + this.offset);
+        let s = this.baseSize;
+        let alpha = 50;
+        
+        if (cycle > 0.9) { // Solo durante il picco dell'onda
+          s = this.baseSize + map(cycle, 0.9, 1, 0, 2.5);
+          alpha = map(cycle, 0.9, 1, 100, 255);
+        } else if (cycle > 0) {
+          alpha = map(cycle, 0, 0.9, 50, 100);
+        }
+
+        noStroke(); 
+        fill(255, 255, 255, alpha); 
+        ellipse(this.x, this.y, s, s);
+        
+        // Flare (Bagliore) estremo
+        if (cycle > 0.95) {
+           fill(255, 255, 255, alpha * 0.4);
+           ellipse(this.x, this.y, s * 2.5, s * 2.5);
+        }
       }
     }
 
+    // UPDATE: Comete verosimili. Origine esterna randomica verso l'interno.
     class Comet {
-      constructor() { this.reset(); this.x = random(-width, width); }
-      reset() { this.x = random(width/2, width * 1.5); this.y = random(-height, -height/2); this.speed = random(15, 35); this.length = random(60, 200); }
-      update() { this.x -= this.speed; this.y += this.speed * 0.8; if(this.x < -width || this.y > height) this.reset(); }
+      constructor() { this.reset(); this.x = random(-width, width); this.y = random(-height, height); }
+      reset() {
+        let angle = random(TWO_PI);
+        let radius = max(width, height) * 1.2;
+        this.x = cos(angle) * radius;
+        this.y = sin(angle) * radius;
+        
+        // Destinazione interna
+        let destX = random(-width/3, width/3);
+        let destY = random(-height/3, height/3);
+        
+        let dirX = destX - this.x; let dirY = destY - this.y;
+        let len = sqrt(dirX*dirX + dirY*dirY);
+        
+        this.speed = random(12, 35);
+        this.vx = (dirX / len) * this.speed;
+        this.vy = (dirY / len) * this.speed;
+        
+        this.length = random(40, 180);
+        this.thickness = random(1, 2.5);
+        this.c = color(200, 255, 255, random(100, 200));
+      }
+      update() {
+        this.x += this.vx; this.y += this.vy;
+        // Reset se si allontana troppo dal centro dalla parte opposta
+        if (dist(0, 0, this.x, this.y) > max(width, height) * 1.5) this.reset();
+      }
       show() {
-        strokeWeight(2); stroke(0, 255, 255, 150); line(this.x, this.y, this.x + this.length, this.y - this.length * 0.8);
-        noStroke(); fill(255, 255, 255, 255); ellipse(this.x, this.y, 3, 3);
+        strokeWeight(this.thickness); stroke(this.c);
+        let tailX = this.x - this.vx * (this.length/this.speed);
+        let tailY = this.y - this.vy * (this.length/this.speed);
+        line(this.x, this.y, tailX, tailY);
+        noStroke(); fill(255); ellipse(this.x, this.y, this.thickness * 1.5);
       }
     }
 
@@ -233,8 +290,8 @@
       canvas.style('z-index', '10'); 
 
       for (let i = 0; i < 400; i++) stars.push(new Star());
-      for (let i = 0; i < 20; i++) pulsars.push(new Pulsar());
-      for (let i = 0; i < 4; i++) comets.push(new Comet());
+      for (let i = 0; i < 30; i++) pulsars.push(new Pulsar());
+      for (let i = 0; i < 5; i++) comets.push(new Comet());
 
       video = createCapture(VIDEO, () => {
         video.size(640, 480);
@@ -304,7 +361,6 @@
         let nX = (pts[1][0] - video.width/2) / (video.width/2); 
         let nY = (pts[1][1] - video.height/2) / (video.height/2);
 
-        // SENSORE LABBRA (Apertura bocca = Riverbero spaziale)
         let mDist = dist(pts[13][0], pts[13][1], pts[14][0], pts[14][1]);
         cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.2);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
@@ -348,58 +404,59 @@
       endShape(CLOSE);
       drawingContext.clip();
 
-      // Sfondo Nero/Trasparente della Cabina
       drawCockpitBackground(cFlange);
 
       // ==========================================
       // TRACKING CAMERA & MAPPA SFUMATURA SCI-FI
       // ==========================================
       let scaleF = 1.7; 
-      let pW = 640 * scaleF; // ~1088
-      let pH = 480 * scaleF; // ~816
-      
-      let dX = 0; let dY = 0;
+      let pW = 640 * scaleF; // 1088
+      let pH = 480 * scaleF; // 816
 
-      // TRACKING MATRIX FIXED: La camera ora insegue correttamente il naso
+      // UPDATE BUGFIX: Smooth Tracking + Constrain preciso
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
-        // La logica è invertita matematicamente per supportare il translate PRE-Scale
-        dX = (pts[1][0] - 320) * scaleF; 
-        dY = -(pts[1][1] - 240) * scaleF;
+        let targetX = (pts[1][0] - 320) * scaleF; 
+        let targetY = -(pts[1][1] - 240) * scaleF;
         
         let maxDx = (pW - HUD_W) / 2; 
         let maxDy = (pH - HUD_H) / 2; 
-        dX = constrain(dX, -maxDx, maxDx);
-        dY = constrain(dY, -maxDy, maxDy);
+        
+        targetX = constrain(targetX, -maxDx, maxDx);
+        targetY = constrain(targetY, -maxDy, maxDy);
+
+        cameraDX = lerp(cameraDX, targetX, 0.15);
+        cameraDY = lerp(cameraDY, targetY, 0.15);
       }
 
       push(); 
-      translate(dX, dY); // Traslazione applicata PRIMA dello specchio
-      scale(-1, 1);      // Effetto Specchio
+      translate(cameraDX, cameraDY); 
+      scale(-1, 1); // Effetto Specchio
 
       // Filtro Desaturazione Hard
       drawingContext.filter = 'grayscale(100%) contrast(1.5) brightness(0.8)';
       image(video, -pW/2, -pH/2, pW, pH);
       drawingContext.filter = 'none';
 
-      // --- EFFETTO MAPPA SFUMATURA CYBERPUNK (OVERLAY STRONG) ---
+      // --- EFFETTO MAPPA SFUMATURA CYBERPUNK (OVERLAY) ---
       blendMode(OVERLAY);
       let grad = drawingContext.createLinearGradient(-pW/2, -pH/2, pW/2, pH/2);
       grad.addColorStop(0, 'rgba(0, 255, 255, 1)'); // Ciano Assoluto
       grad.addColorStop(1, 'rgba(255, 0, 255, 1)'); // Magenta Assoluto
       drawingContext.fillStyle = grad;
       rect(-pW/2, -pH/2, pW, pH);
-      blendMode(BLEND);
+      blendMode(BLEND); // Reset fondamentale per p5.js
 
-      // Aberrazione Cromatica attiva in base al Pitch
+      // UPDATE BUGFIX: Aberrazione Cromatica pura tramite blendMode (Niente globalComposite nativo)
       let rO = map(cPitch, 0, 24, 0, 30);
       if(rO > 0.5) {
-        drawingContext.globalCompositeOperation = 'screen';
-        drawingContext.globalAlpha = 0.5;
-        image(video, -pW/2 - rO, -pH/2, pW, pH); // Ghost rosso/ciano simulato dallo shift
+        blendMode(SCREEN);
+        tint(255, 0, 50, 150); 
+        image(video, -pW/2 - rO, -pH/2, pW, pH); 
+        tint(0, 255, 255, 150); 
         image(video, -pW/2 + rO, -pH/2, pW, pH);
-        drawingContext.globalAlpha = 1.0;
-        drawingContext.globalCompositeOperation = 'source-over';
+        blendMode(BLEND);
+        noTint();
       }
 
       // --- MASCHERA NEURALE SUL VOLTO ---
@@ -427,12 +484,10 @@
       strokeWeight(1.5);
       for(let i = -HUD_H/2; i < HUD_H/2; i+= 5) { line(-HUD_W/2, i, HUD_W/2, i); }
 
-      // Pannelli Cabina Sovrapposti
       drawCockpitForeground(cPitch, cVocoder, vol);
 
       drawingContext.restore(); // Fine maschera Ottagonale
 
-      // OVERLAY CASCO (Vetri ed Intelaiatura frontale)
       drawHelmetOverlay(HUD_W, HUD_H);
       pop();
     }
@@ -455,7 +510,6 @@
 
     function drawCockpitForeground(pitchParam, vocoderParam, volParam) {
       push();
-      // Pannello Destro PITCH
       push(); translate(HUD_W/2 - 40, 0);
       stroke(0, 255, 255, 150); fill(0, 15, 30, 220); rect(-20, -120, 40, 240, 3);
       let pY = map(pitchParam, 0, 24, 110, -110);
@@ -463,7 +517,6 @@
       stroke(0, 255, 255); strokeWeight(3); line(-15, pY, 15, pY);
       pop();
 
-      // Pannello Sinistro VOCODER
       push(); translate(-HUD_W/2 + 40, 0);
       stroke(0, 255, 255, 150); fill(0, 15, 30, 220); rect(-20, -120, 40, 240, 3);
       let vCol = lerpColor(color(0, 255, 255, 80), color(255, 0, 255, 220), vocoderParam);
@@ -472,7 +525,6 @@
       rect(-10 - pulse, -80 - pulse, 20 + pulse*2, 160 + pulse*2, 3);
       pop();
 
-      // Overload Cabina
       if (volParam > 0.85) {
         fill(255, 0, 50, 150); noStroke();
         rect(-HUD_W/2, -HUD_H/2, HUD_W, 10); rect(-HUD_W/2, HUD_H/2 - 10, HUD_W, 10);
@@ -515,6 +567,7 @@
 
     function aggiornaInterfacciaHTML(db, vol) {
       document.getElementById('txt-grav').innerText = `> GRAVITÀ_X: +${cPitch.toFixed(1)} ST`;
+      document.getElementById('txt-echo').innerText = `> ECHO_SPACE: ${(cSpace*100).toFixed(0)}%`;
       document.getElementById('txt-vocoder').innerText = `> VOCODER_SYNTH: ${(cVocoder*100).toFixed(0)}%`;
       document.getElementById('txt-jet').innerText = `> JET_FLANGE: ${(cFlange*100).toFixed(0)}%`;
       let peakText = (db === -Infinity) ? "-INF" : db.toFixed(1); document.getElementById('txt-peak').innerText = `MIC.PEAK: [${peakText} dB]`;
@@ -529,7 +582,6 @@
       }
     }
 
-    // --- GESTIONE MODALS ED EFFETTO DIMMING ---
     window.showTutorial = function(type) {
       const m = document.getElementById('tutorial-modal'); const t = document.getElementById('tut-title'); const d = document.getElementById('tut-desc');
       if(type==='LEFT') { t.innerText="VOCODER SYNTH"; d.innerText="Sposta la testa a SINISTRA.\nAttiva il tracciamento dei formanti e innesca la sintesi vocale robotica."; }
