@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // SCI-FI HUD OPTIMIZED</title>
+  <title>VOID RIDER // TRACKING CAMERA FIXED</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -160,9 +160,8 @@
     let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
     let stars = [];
-    let customHelmetImg; 
-
-    // DIMENSIONI OBLÒ OTTIMIZZATE (Più compatto per non nascondere i cavi)
+    
+    // DIMENSIONI OBLÒ OTTIMIZZATE (Compatte per non tagliare le sinapsi fluide)
     const HUD_W = 400;
     const HUD_H = 500;
 
@@ -179,10 +178,6 @@
       }
     }
 
-    function preload() {
-      customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
-    }
-
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.style('position', 'fixed');
@@ -192,7 +187,6 @@
 
       for (let i = 0; i < 300; i++) stars.push(new Star());
 
-      // Rimozione BodyPix. Inizializziamo solo FaceMesh (Veloce e Reattivo)
       video = createCapture(VIDEO, () => {
         video.size(640, 480);
         facemesh = ml5.facemesh(video, () => { 
@@ -261,7 +255,7 @@
         let nX = (pts[1][0] - video.width/2) / (video.width/2); 
         let nY = (pts[1][1] - video.height/2) / (video.height/2);
 
-        // IL SENSORE DEL RESPIRO È QUI (Punti 13 e 14 della bocca)
+        // SENSORE LABBRA (Effetto Echo Space)
         let mDist = dist(pts[13][0], pts[13][1], pts[14][0], pts[14][1]);
         cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.2);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
@@ -288,8 +282,7 @@
       let shake = vol > 0.85 ? random(-15, 15) : 0;
       translate(width/2 + shake, height/2 + shake);
 
-      // 1. FLUID SYNAPSES DISEGNATE PRIMA DELL'OBLÒ
-      // Partono dal centro e si estendono verso l'esterno agganciandosi visivamente agli Hotspot HTML
+      // 1. FLUID SYNAPSES (Disegnate all'esterno dell'oblò)
       drawFluidSynapses();
 
       drawingContext.save();
@@ -302,67 +295,86 @@
       drawingContext.clip();
 
       // ==========================================
-      // 2. SFONDO CABINA E FILTRO SCI-FI WEBCAM
+      // 2. SFONDO CABINA 
       // ==========================================
       drawCockpitBackground(cFlange);
 
-      // Render Video Sci-Fi
-      push(); 
-      scale(-1, 1); // Effetto Specchio essenziale
-      let pW = HUD_W * 1.5; let pH = HUD_H * 1.3; // Video scalato per inquadrare le spalle
+      // ==========================================
+      // 3. TRACKING CAMERA & FILTRO SCI-FI 
+      // ==========================================
+      // Fattore di zoom per inquadrare testa e spalle e dare spazio al movimento
+      let scaleF = 1.6; 
+      let pW = 640 * scaleF; 
+      let pH = 480 * scaleF;
       
-      // Filtro Olografico Base (Azzurrino Videogame)
-      tint(0, 150, 255, 180); 
-      image(video, -pW/2, -pH/2 + 20, pW, pH);
+      let vidX = -pW/2;
+      let vidY = -pH/2;
 
-      // Effetto Aberrazione/Glitch attivato dal Pitch
+      // Se troviamo il volto, calcoliamo dove posizionare il video per tenere il naso al centro
+      if (predictions.length > 0) {
+        let pts = predictions[0].scaledMesh;
+        let targetX = -(pts[1][0] * scaleF);
+        // Sposta il naso leggermente verso l'alto per inquadrare le spalle
+        let targetY = -(pts[1][1] * scaleF) - 20; 
+        
+        // IL SEGRETO: Constrain. Blocca il panning se il bordo del video entra nell'oblò,
+        // così non vedi MAI lo spazio vuoto/nero ai lati.
+        vidX = constrain(targetX, HUD_W/2 - pW, -HUD_W/2);
+        vidY = constrain(targetY, HUD_H/2 - pH, -HUD_H/2);
+      }
+
+      push(); 
+      scale(-1, 1); // Effetto Specchio
+
+      // Render Video Base
+      tint(0, 150, 255, 180); 
+      image(video, vidX, vidY, pW, pH);
+
+      // Aberrazione Cromatica
       let rO = map(cPitch, 0, 24, 0, 25);
       blendMode(SCREEN);
-      tint(255, 0, 50, 100); image(video, -pW/2 - rO, -pH/2 + 20, pW, pH);
-      tint(0, 255, 255, 100); image(video, -pW/2 + rO, -pH/2 + 20, pW, pH);
+      tint(255, 0, 50, 100); image(video, vidX - rO, vidY, pW, pH);
+      tint(0, 255, 255, 100); image(video, vidX + rO, vidY, pW, pH);
       blendMode(BLEND);
+      tint(255, 255, 255, 255); // Reset tint fondamentale
 
-      // --- MASCHERA DI PUNTI NEURALI SUL VOLTO ---
+      // --- MASCHERA DI PUNTI NEURALI ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         
-        // Disegna Griglia di Punti
+        // I punti vengono disegnati in relazione a vidX e vidY, così rimangono
+        // perfetamente incollati al tuo volto anche quando la telecamera smette di fare panning.
         stroke(0, 255, 255, 200);
         strokeWeight(2);
         beginShape(POINTS);
-        for(let i=0; i<pts.length; i+=2) { // Disegniamo 1 punto su 2 per un look più pulito
-          let mx = map(pts[i][0], 0, 640, -pW/2, pW/2);
-          let my = map(pts[i][1], 0, 480, -pH/2 + 20, -pH/2 + 20 + pH);
-          vertex(mx, my);
+        for(let i=0; i<pts.length; i+=2) { 
+          vertex(vidX + pts[i][0] * scaleF, vidY + pts[i][1] * scaleF);
         }
         endShape();
 
-        // Disegna Contorno Silhouette e Tratti Somatici Chiave
         noFill(); stroke(255, 0, 255, 180); strokeWeight(1.5);
         beginShape();
         for(let i of silhouetteIndices) {
-          let mx = map(pts[i][0], 0, 640, -pW/2, pW/2);
-          let my = map(pts[i][1], 0, 480, -pH/2 + 20, -pH/2 + 20 + pH);
-          vertex(mx, my);
+          vertex(vidX + pts[i][0] * scaleF, vidY + pts[i][1] * scaleF);
         }
         endShape(CLOSE);
       }
       pop(); // Fine zona specchiata
 
-      // Scanlines CRT
+      // Scanlines CRT per l'effetto HUD
       stroke(0, 255, 200, 15);
       strokeWeight(1);
       for(let i = -HUD_H/2; i < HUD_H/2; i+= 4) { line(-HUD_W/2, i, HUD_W/2, i); }
 
       // ==========================================
-      // 3. PANNELLI CABINA (SOVRAPPOSTI AL VIDEO)
+      // 4. PANNELLI CABINA SOVRAPPOSTI
       // ==========================================
       drawCockpitForeground(cPitch, cVocoder, vol);
 
       drawingContext.restore(); 
 
       // ==========================================
-      // 4. OVERLAY CASCO (Vetri e dettagli frontali)
+      // 5. OVERLAY CASCO E VETRO
       // ==========================================
       drawHelmetOverlay(HUD_W, HUD_H);
       pop();
@@ -372,14 +384,12 @@
 
     function drawCockpitBackground(flangeParam) {
       push();
-      background(5, 10, 20, 180); // Leggermente trasparente per profondità
+      background(5, 10, 20, 180); 
       let horizon = 50; 
       let t = frameCount * (1 + flangeParam * 3); 
       
-      // Sole lontano
       noStroke(); fill(0, 255, 255, 30); ellipse(0, horizon, 200, 100); fill(0, 255, 255, 60); ellipse(0, horizon, 100, 50);
 
-      // Griglia Pavimento Neon
       strokeWeight(2); stroke(0, 255, 255, 60);
       for (let i = 0; i < 15; i++) {
         let y = horizon + pow(i + ((t*0.5)%20)/20, 2) * 2;
@@ -393,7 +403,7 @@
 
     function drawCockpitForeground(pitchParam, vocoderParam, volParam) {
       push();
-      // PANNELLO DESTRO: INDICATORE PITCH 
+      // PANNELLO PITCH
       push(); translate(HUD_W/2 - 40, 0);
       stroke(0, 255, 255, 150); fill(0, 15, 30, 220); rect(-20, -120, 40, 240, 3);
       let pY = map(pitchParam, 0, 24, 110, -110);
@@ -401,7 +411,7 @@
       stroke(0, 255, 255); strokeWeight(3); line(-15, pY, 15, pY);
       pop();
 
-      // PANNELLO SINISTRO: INDICATORE VOCODER
+      // PANNELLO VOCODER
       push(); translate(-HUD_W/2 + 40, 0);
       stroke(0, 255, 255, 150); fill(0, 15, 30, 220); rect(-20, -120, 40, 240, 3);
       let vCol = lerpColor(color(0, 255, 255, 80), color(255, 0, 255, 220), vocoderParam);
@@ -410,7 +420,7 @@
       rect(-10 - pulse, -80 - pulse, 20 + pulse*2, 160 + pulse*2, 3);
       pop();
 
-      // FLASH ROSSO CABINA
+      // OVERLOAD FLASH
       if (volParam > 0.85) {
         fill(255, 0, 50, 150); noStroke();
         rect(-HUD_W/2, -HUD_H/2, HUD_W, 10); rect(-HUD_W/2, HUD_H/2 - 10, HUD_W, 10);
@@ -426,11 +436,9 @@
       vertex(w/2 - 30, h/2); vertex(-w/2 + 30, h/2); vertex(-w/2, h/2 - 30); vertex(-w/2, -h/2 + 30);
       endShape(CLOSE);
       
-      // Dettagli HUD Vetro
       strokeWeight(1); fill(0, 255, 255, 40);
       rect(-w/2 + 40, -h/2 + 15, 30, 6); rect(w/2 - 70, -h/2 + 15, 30, 6);
       
-      // Reticolo Centrale di Mira
       stroke(0, 255, 255, 80);
       line(-15, 0, 15, 0); line(0, -15, 0, 15); ellipse(0,0, 60,60);
       pop();
@@ -448,10 +456,9 @@
           noStroke(); fill(activeColor); ellipse(px, py, 15 + intensity*10, 15 + intensity*10); fill(255); ellipse(px, py, 6, 6); noFill();
         }
       }
-      // I cavi escono visivamente dal centro e vanno verso i margini dello schermo per toccare gli Hotspot HTML
-      streamFluid(0, -height/2 + 50, cFlange, color(255, 200, 0)); // Verso l'alto
-      streamFluid(-width/2 + 100, 0, cVocoder, color(255, 0, 255)); // Verso sinistra
-      streamFluid(width/2 - 100, 0, cPitch/24, color(0, 150, 255)); // Verso destra
+      streamFluid(0, -height/2 + 50, cFlange, color(255, 200, 0)); 
+      streamFluid(-width/2 + 100, 0, cVocoder, color(255, 0, 255)); 
+      streamFluid(width/2 - 100, 0, cPitch/24, color(0, 150, 255)); 
     }
 
     function aggiornaInterfacciaHTML(db, vol) {
