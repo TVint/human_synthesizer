@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // TRACKING CAMERA FIXED</title>
+  <title>VOID RIDER // PRO HUD EDITION</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -23,7 +23,7 @@
     #galaxy-bg {
       position: fixed; top: -20%; left: -20%; width: 140%; height: 140%; z-index: 1;
       background: url('https://res.cloudinary.com/dkni7ncod/image/upload/q_auto/f_auto/v1775955501/galaxy_n7qawo.jpg') center/cover no-repeat;
-      opacity: 0.4; animation: galaxySpin 150s infinite linear; pointer-events: none;
+      opacity: 0.25; animation: galaxySpin 200s infinite linear; pointer-events: none;
     }
     @keyframes galaxySpin {
       0% { transform: scale(1.5) rotate(0deg); }
@@ -35,11 +35,18 @@
       z-index: 100; pointer-events: none; 
     }
 
+    /* Dimmer Layer per far risaltare il Modal */
+    #ui-dimmer {
+      position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(0, 5, 15, 0.85); z-index: 90; opacity: 0; pointer-events: none;
+      transition: opacity 0.4s ease; backdrop-filter: blur(3px);
+    }
+
     #boot-screen {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       background: rgba(0, 5, 15, 0.95); border: 2px solid #0ff; padding: 40px; 
       text-align: center; width: 600px; max-width: 90vw; box-shadow: 0 0 50px rgba(0, 255, 255, 0.4);
-      border-radius: 5px; pointer-events: auto; transition: opacity 0.5s;
+      border-radius: 5px; pointer-events: auto; transition: opacity 0.5s; z-index: 1000;
     }
     #boot-screen h1 { margin: 0 0 20px 0; font-size: 2.5rem; letter-spacing: 5px; border-bottom: 2px solid #0ff; padding-bottom: 10px; }
     
@@ -48,44 +55,51 @@
     .btn:disabled { opacity: 0.5; border-color: #555; color: #aaa; cursor: not-allowed; background: transparent; }
 
     #panic {
-      position: absolute; top: 30px; right: 30px; display: none; pointer-events: auto;
-      background: rgba(255, 0, 50, 0.2); color: #ff0032; border: 2px solid #ff0032;
+      position: absolute; top: 30px; right: 150px; display: none; pointer-events: auto;
+      background: rgba(255, 0, 50, 0.15); color: #fff; border: 2px solid #ff0032; text-shadow: 0 0 8px #ff0032;
       padding: 15px 30px; cursor: pointer; font-weight: bold; font-size: 1.2rem; transition: 0.2s; border-radius: 3px; letter-spacing: 2px;
+      z-index: 80;
     }
-    #panic:hover { background: #ff0032; color: #000; box-shadow: 0 0 30px #ff0032; }
+    #panic:hover { background: #ff0032; color: #000; box-shadow: 0 0 30px #ff0032; text-shadow: none; }
 
     .hotspot {
       position: absolute; display: none; pointer-events: auto; cursor: pointer;
       background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
       justify-content: center; align-items: center; text-align: center; color: rgba(0,255,255,0.4); font-size: 1.2rem; font-weight: bold; transition: 0.3s;
+      z-index: 80;
     }
     .hotspot:hover { background: rgba(0, 255, 255, 0.2); border: 1px solid #0ff; color: #0ff; text-shadow: 0 0 10px #0ff; }
+    
     #hs-top { top: 20px; left: 50%; transform: translateX(-50%); width: 400px; height: 60px; }
     #hs-left { top: 10%; left: 20px; width: 80px; height: 80%; }
     #hs-right { top: 10%; right: 20px; width: 80px; height: 80%; }
 
+    .hs-text-left { display: inline-block; transform: rotate(-90deg); white-space: nowrap; letter-spacing: 5px; }
+    .hs-text-right { display: inline-block; transform: rotate(90deg); white-space: nowrap; letter-spacing: 5px; }
+
     #dev-panel {
-      position: absolute; bottom: 30px; left: 30px; display: none;
+      position: absolute; bottom: 30px; left: 150px; width: 280px; display: none;
       background: rgba(0, 10, 25, 0.9); border: 1px solid #0ff; padding: 20px;
       flex-direction: column; gap: 15px; pointer-events: auto;
       box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); border-radius: 5px; backdrop-filter: blur(5px);
+      z-index: 80;
     }
-    #dev-panel h3 { margin: 0; font-size: 1rem; color: #fff; letter-spacing: 2px; }
+    #dev-panel h3 { margin: 0; font-size: 1rem; color: #fff; letter-spacing: 2px; text-align: center;}
     .slider-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.9rem;}
-    input[type=range] { -webkit-appearance: none; width: 150px; background: transparent; }
+    input[type=range] { -webkit-appearance: none; width: 130px; background: transparent; }
     input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 8px; background: #0ff; cursor: pointer; margin-top: -6px; }
     input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(0, 255, 255, 0.3); }
 
     .hud-text {
       position: absolute; display: none; top: 50%; transform: translateY(-50%);
-      font-size: 1.1rem; line-height: 2; color: #0ff; text-shadow: 0 0 5px #0ff;
+      font-size: 1.1rem; line-height: 2; color: #0ff; text-shadow: 0 0 5px #0ff; z-index: 80;
     }
-    #telemetry-left { left: 40px; }
-    #system-right { right: 40px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
+    #telemetry-left { left: 150px; }
+    #system-right { right: 150px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
 
     #hud-bottom {
       position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-      display: none; flex-direction: column; align-items: center; gap: 10px; width: 500px; max-width: 80vw;
+      display: none; flex-direction: column; align-items: center; gap: 10px; width: 500px; max-width: 80vw; z-index: 80;
     }
     #vu-meter-bg { width: 100%; height: 15px; background: rgba(10, 20, 30, 0.8); border: 2px solid #0ff; border-radius: 2px; overflow: hidden; }
     #vu-meter-fill { width: 0%; height: 100%; background: #0ff; transition: width 0.1s, background 0.1s; }
@@ -93,7 +107,13 @@
 
     .alert-state { background: rgba(255, 0, 50, 0.3) !important; box-shadow: inset 0 0 100px rgba(255,0,50,0.5); }
 
-    #tutorial-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 5, 10, 0.95); border: 2px solid #0ff; box-shadow: 0 0 50px #0ff; padding: 40px; z-index: 9000; display: none; width: 500px; text-align: center; border-radius: 5px; pointer-events: auto; }
+    #tutorial-modal { 
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); 
+      background: rgba(0, 5, 10, 0.95); border: 2px solid #0ff; box-shadow: 0 0 50px #0ff; 
+      padding: 40px; z-index: 100; display: none; opacity: 0; width: 500px; text-align: center; 
+      border-radius: 5px; pointer-events: auto; transition: 0.3s ease;
+    }
+    #tutorial-modal.active { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   </style>
 </head>
 <body>
@@ -101,6 +121,8 @@
   <div id="galaxy-bg"></div>
 
   <div id="ui-layer">
+    <div id="ui-dimmer"></div>
+
     <div id="boot-screen">
       <h1>VOID RIDER</h1>
       <p id="boot-status">Calibrazione Rete Neurale Facemesh in corso...</p>
@@ -110,12 +132,12 @@
     <div id="dev-panel">
       <h3>AUDIO SETUP</h3>
       <div class="slider-group">
-        <label>GAIN MIC:</label>
+        <label>GAIN:</label>
         <input type="range" id="mic-gain" min="0" max="10" value="2" step="1">
         <span id="gain-val" style="width:40px;">+2dB</span>
       </div>
       <div class="slider-group">
-        <label>NOISE GATE:</label>
+        <label>GATE:</label>
         <input type="range" id="noise-gate" min="-60" max="-10" value="-30" step="1">
         <span id="gate-val" style="width:40px;">-30dB</span>
       </div>
@@ -141,14 +163,15 @@
 
     <button id="panic" onclick="window.emergencyMute()">⚠ TAGLIO MOTORI</button>
     
-    <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[ FLANGER ]</div>
-    <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">[ VOCODER ]</div>
-    <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')">[ PITCH ]</div>
+    <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[ WARP ]</div>
+    <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')"><span class="hs-text-left">[ VOCODER ]</span></div>
+    <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')"><span class="hs-text-right">[ PITCH ]</span></div>
 
     <div id="tutorial-modal">
       <h2 id="tut-title" style="color:#0ff;">TITOLO</h2>
-      <p id="tut-desc" style="color:#fff; font-size:1.2rem;">Descrizione...</p>
-      <button class="btn" onclick="document.getElementById('tutorial-modal').style.display='none'">CHIUDI</button>
+      <p id="tut-desc" style="color:#fff; font-size:1.2rem; line-height: 1.6;">Descrizione...</p>
+      <br>
+      <button class="btn" onclick="closeTutorial()">CHIUDI</button>
     </div>
   </div>
 
@@ -159,9 +182,13 @@
     let video, facemesh, predictions = [];
     let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
-    let stars = [];
     
-    // DIMENSIONI OBLÒ OTTIMIZZATE (Compatte per non tagliare le sinapsi fluide)
+    // Arrays per lo sfondo galattico realistico
+    let stars = [];
+    let pulsars = [];
+    let comets = [];
+    
+    // DIMENSIONI OBLÒ
     const HUD_W = 400;
     const HUD_H = 500;
 
@@ -174,7 +201,25 @@
         let sx = map(this.x / this.z, 0, 1, 0, width); let sy = map(this.y / this.z, 0, 1, 0, height);
         let px = map(this.x / this.pz, 0, 1, 0, width); let py = map(this.y / this.pz, 0, 1, 0, height);
         this.pz = this.z;
-        stroke(200, 255, 255, map(this.z, 0, width, 255, 0)); strokeWeight(map(this.z, 0, width, 3, 0)); line(px, py, sx, sy);
+        stroke(200, 255, 255, map(this.z, 0, width, 200, 0)); strokeWeight(map(this.z, 0, width, 2.5, 0)); line(px, py, sx, sy);
+      }
+    }
+
+    class Pulsar {
+      constructor() { this.x = random(-width/2, width/2); this.y = random(-height/2, height/2); this.baseSize = random(3, 8); this.speed = random(0.01, 0.05); this.offset = random(100); }
+      show() {
+        let s = this.baseSize + sin(frameCount * this.speed + this.offset) * (this.baseSize * 0.8);
+        noStroke(); fill(0, 150, 255, 100); ellipse(this.x, this.y, s * 4, s * 4); fill(255, 200, 255, 200); ellipse(this.x, this.y, s, s);
+      }
+    }
+
+    class Comet {
+      constructor() { this.reset(); }
+      reset() { this.x = random(width/2, width); this.y = random(-height, -height/2); this.speed = random(15, 30); this.length = random(50, 150); }
+      update() { this.x -= this.speed; this.y += this.speed; if(this.x < -width || this.y > height) this.reset(); }
+      show() {
+        strokeWeight(2); stroke(0, 255, 255, 200); line(this.x, this.y, this.x + this.length, this.y - this.length);
+        noStroke(); fill(255); ellipse(this.x, this.y, 4, 4);
       }
     }
 
@@ -185,7 +230,9 @@
       canvas.style('left', '0');
       canvas.style('z-index', '10'); 
 
-      for (let i = 0; i < 300; i++) stars.push(new Star());
+      for (let i = 0; i < 400; i++) stars.push(new Star());
+      for (let i = 0; i < 15; i++) pulsars.push(new Pulsar());
+      for (let i = 0; i < 3; i++) comets.push(new Comet());
 
       video = createCapture(VIDEO, () => {
         video.size(640, 480);
@@ -255,7 +302,7 @@
         let nX = (pts[1][0] - video.width/2) / (video.width/2); 
         let nY = (pts[1][1] - video.height/2) / (video.height/2);
 
-        // SENSORE LABBRA (Effetto Echo Space)
+        // SENSORE LABBRA (Apertura bocca = Riverbero spaziale)
         let mDist = dist(pts[13][0], pts[13][1], pts[14][0], pts[14][1]);
         cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.2);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
@@ -269,10 +316,15 @@
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
       }
 
+      // --- RENDERING SFONDO GALATTICO ---
       push(); translate(width/2, height/2);
-      let warpSpeed = map(cFlange, 0, 1, 1, 80); for (let s of stars) { s.update(warpSpeed); s.show(); }
+      for(let p of pulsars) p.show();
+      let warpSpeed = map(cFlange, 0, 1, 1, 100); 
+      for (let s of stars) { s.update(warpSpeed); s.show(); }
+      for (let c of comets) { c.update(); c.show(); }
       pop();
 
+      // Oscilloscopio Inferiore
       let wave = analyzer.getValue(); let cOsc = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       push(); translate(width/2, 100); stroke(cOsc); strokeWeight(2); noFill();
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -250, 250), wave[i] * 60); } endShape();
@@ -282,7 +334,7 @@
       let shake = vol > 0.85 ? random(-15, 15) : 0;
       translate(width/2 + shake, height/2 + shake);
 
-      // 1. FLUID SYNAPSES (Disegnate all'esterno dell'oblò)
+      // --- FLUID SYNAPSES (Esterne) ---
       drawFluidSynapses();
 
       drawingContext.save();
@@ -294,103 +346,101 @@
       endShape(CLOSE);
       drawingContext.clip();
 
-      // ==========================================
-      // 2. SFONDO CABINA 
-      // ==========================================
+      // Sfondo Nero/Trasparente della Cabina
       drawCockpitBackground(cFlange);
 
       // ==========================================
-      // 3. TRACKING CAMERA & FILTRO SCI-FI 
+      // TELECAMERA TRACKING + FILTRO SCI-FI "MAPPA SFUMATURA"
       // ==========================================
-      // Fattore di zoom per inquadrare testa e spalle e dare spazio al movimento
-      let scaleF = 1.6; 
-      let pW = 640 * scaleF; 
-      let pH = 480 * scaleF;
+      let scaleF = 1.7; 
+      let pW = 640 * scaleF; // ~1088
+      let pH = 480 * scaleF; // ~816
       
-      let vidX = -pW/2;
-      let vidY = -pH/2;
+      let dX = 0; let dY = 0;
 
-      // Se troviamo il volto, calcoliamo dove posizionare il video per tenere il naso al centro
+      // Tracking Camera Logic con Constrain per evitare bordi neri
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
-        let targetX = -(pts[1][0] * scaleF);
-        // Sposta il naso leggermente verso l'alto per inquadrare le spalle
-        let targetY = -(pts[1][1] * scaleF) - 20; 
+        dX = (pts[1][0] - 320) * scaleF; 
+        dY = (pts[1][1] - 240) * scaleF;
         
-        // IL SEGRETO: Constrain. Blocca il panning se il bordo del video entra nell'oblò,
-        // così non vedi MAI lo spazio vuoto/nero ai lati.
-        vidX = constrain(targetX, HUD_W/2 - pW, -HUD_W/2);
-        vidY = constrain(targetY, HUD_H/2 - pH, -HUD_H/2);
+        let maxDx = (pW - HUD_W) / 2; 
+        let maxDy = (pH - HUD_H) / 2; 
+        dX = constrain(dX, -maxDx, maxDx);
+        dY = constrain(dY, -maxDy, maxDy);
       }
 
       push(); 
-      scale(-1, 1); // Effetto Specchio
+      scale(-1, 1); // Specchia per un corretto uso della webcam
+      translate(dX, dY); // Sposta la tela per mantenere il naso al centro
 
-      // Render Video Base
-      tint(0, 150, 255, 180); 
-      image(video, vidX, vidY, pW, pH);
+      // Filtro Desaturazione base
+      drawingContext.filter = 'grayscale(100%) contrast(1.3)';
+      image(video, -pW/2, -pH/2, pW, pH);
+      drawingContext.filter = 'none';
 
-      // Aberrazione Cromatica
-      let rO = map(cPitch, 0, 24, 0, 25);
-      blendMode(SCREEN);
-      tint(255, 0, 50, 100); image(video, vidX - rO, vidY, pW, pH);
-      tint(0, 255, 255, 100); image(video, vidX + rO, vidY, pW, pH);
+      // OVERLAY GRADIENTE (Effetto Mappa Sfumatura Cyberpunk)
+      blendMode(OVERLAY);
+      let grad = drawingContext.createLinearGradient(-pW/2, -pH/2, pW/2, pH/2);
+      grad.addColorStop(0, 'rgba(0, 255, 255, 0.9)'); // Ciano profondo
+      grad.addColorStop(1, 'rgba(255, 0, 255, 0.9)'); // Fucsia neon
+      drawingContext.fillStyle = grad;
+      rect(-pW/2, -pH/2, pW, pH);
       blendMode(BLEND);
-      tint(255, 255, 255, 255); // Reset tint fondamentale
 
-      // --- MASCHERA DI PUNTI NEURALI ---
+      // Aberrazione Cromatica attiva in base al Pitch
+      let rO = map(cPitch, 0, 24, 0, 40);
+      if(rO > 0.5) {
+        blendMode(SCREEN);
+        tint(255, 0, 50, 100); image(video, -pW/2 - rO, -pH/2, pW, pH);
+        tint(0, 255, 255, 100); image(video, -pW/2 + rO, -pH/2, pW, pH);
+        blendMode(BLEND);
+        noTint();
+      }
+
+      // --- MASCHERA NEURALE SUL VOLTO ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         
-        // I punti vengono disegnati in relazione a vidX e vidY, così rimangono
-        // perfetamente incollati al tuo volto anche quando la telecamera smette di fare panning.
-        stroke(0, 255, 255, 200);
-        strokeWeight(2);
+        // Maglia di Punti (Renderizza in coordinate relative al video centrato a -pW/2)
+        stroke(0, 255, 255, 150); strokeWeight(2.5);
         beginShape(POINTS);
         for(let i=0; i<pts.length; i+=2) { 
-          vertex(vidX + pts[i][0] * scaleF, vidY + pts[i][1] * scaleF);
+          vertex(pts[i][0] * scaleF - pW/2, pts[i][1] * scaleF - pH/2);
         }
         endShape();
 
-        noFill(); stroke(255, 0, 255, 180); strokeWeight(1.5);
+        // Silhouette ed Occhi/Bocca
+        noFill(); stroke(255, 0, 255, 200); strokeWeight(1.5);
         beginShape();
         for(let i of silhouetteIndices) {
-          vertex(vidX + pts[i][0] * scaleF, vidY + pts[i][1] * scaleF);
+          vertex(pts[i][0] * scaleF - pW/2, pts[i][1] * scaleF - pH/2);
         }
         endShape(CLOSE);
       }
-      pop(); // Fine zona specchiata
+      pop(); // Fine zona specchiata e traslata
 
-      // Scanlines CRT per l'effetto HUD
-      stroke(0, 255, 200, 15);
-      strokeWeight(1);
-      for(let i = -HUD_H/2; i < HUD_H/2; i+= 4) { line(-HUD_W/2, i, HUD_W/2, i); }
+      // Scanlines CRT sull'HUD
+      stroke(0, 255, 200, 20);
+      strokeWeight(1.5);
+      for(let i = -HUD_H/2; i < HUD_H/2; i+= 5) { line(-HUD_W/2, i, HUD_W/2, i); }
 
-      // ==========================================
-      // 4. PANNELLI CABINA SOVRAPPOSTI
-      // ==========================================
+      // Pannelli Cabina Sovrapposti
       drawCockpitForeground(cPitch, cVocoder, vol);
 
-      drawingContext.restore(); 
+      drawingContext.restore(); // Fine maschera Ottagonale
 
-      // ==========================================
-      // 5. OVERLAY CASCO E VETRO
-      // ==========================================
+      // OVERLAY CASCO (Vetri ed Intelaiatura frontale)
       drawHelmetOverlay(HUD_W, HUD_H);
       pop();
     }
 
-    // --- FUNZIONI DI DISEGNO MODULARI ---
-
     function drawCockpitBackground(flangeParam) {
       push();
-      background(5, 10, 20, 180); 
+      background(5, 10, 20, 100); 
       let horizon = 50; 
       let t = frameCount * (1 + flangeParam * 3); 
-      
-      noStroke(); fill(0, 255, 255, 30); ellipse(0, horizon, 200, 100); fill(0, 255, 255, 60); ellipse(0, horizon, 100, 50);
-
-      strokeWeight(2); stroke(0, 255, 255, 60);
+      strokeWeight(2); stroke(0, 255, 255, 40);
       for (let i = 0; i < 15; i++) {
         let y = horizon + pow(i + ((t*0.5)%20)/20, 2) * 2;
         if (y < HUD_H/2) line(-HUD_W/2, y, HUD_W/2, y);
@@ -403,7 +453,7 @@
 
     function drawCockpitForeground(pitchParam, vocoderParam, volParam) {
       push();
-      // PANNELLO PITCH
+      // Pannello Destro PITCH
       push(); translate(HUD_W/2 - 40, 0);
       stroke(0, 255, 255, 150); fill(0, 15, 30, 220); rect(-20, -120, 40, 240, 3);
       let pY = map(pitchParam, 0, 24, 110, -110);
@@ -411,16 +461,15 @@
       stroke(0, 255, 255); strokeWeight(3); line(-15, pY, 15, pY);
       pop();
 
-      // PANNELLO VOCODER
+      // Pannello Sinistro VOCODER
       push(); translate(-HUD_W/2 + 40, 0);
       stroke(0, 255, 255, 150); fill(0, 15, 30, 220); rect(-20, -120, 40, 240, 3);
       let vCol = lerpColor(color(0, 255, 255, 80), color(255, 0, 255, 220), vocoderParam);
       noStroke(); fill(vCol); 
-      let pulse = sin(frameCount * 0.2) * 10 * vocoderParam;
+      let pulse = sin(frameCount * 0.3) * 12 * vocoderParam;
       rect(-10 - pulse, -80 - pulse, 20 + pulse*2, 160 + pulse*2, 3);
       pop();
 
-      // OVERLOAD FLASH
       if (volParam > 0.85) {
         fill(255, 0, 50, 150); noStroke();
         rect(-HUD_W/2, -HUD_H/2, HUD_W, 10); rect(-HUD_W/2, HUD_H/2 - 10, HUD_W, 10);
@@ -477,18 +526,33 @@
       }
     }
 
+    // --- GESTIONE MODALS ED EFFETTO DIMMING ---
     window.showTutorial = function(type) {
       const m = document.getElementById('tutorial-modal'); const t = document.getElementById('tut-title'); const d = document.getElementById('tut-desc');
-      if(type==='LEFT') { t.innerText="VOCODER SYNTH"; d.innerText="Sposta la testa a SINISTRA. Attiva il tracciamento dei formanti e la sintesi vocale."; }
-      if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Sposta la testa a DESTRA. Elimina la gravità vocale."; }
-      if(type==='UP')   { t.innerText="WARP FLANGER"; d.innerText="Guarda in ALTO. Innesca il reattore al plasma."; }
+      if(type==='LEFT') { t.innerText="VOCODER SYNTH"; d.innerText="Sposta la testa a SINISTRA.\nAttiva il tracciamento dei formanti e innesca la sintesi vocale robotica."; }
+      if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Sposta la testa a DESTRA.\nInverti la polarità gravitazionale della voce alzandone il pitch."; }
+      if(type==='UP')   { t.innerText="WARP FLANGER"; d.innerText="Guarda in ALTO.\nInnesca il reattore al plasma per distorcere il tessuto spaziotemporale dell'audio."; }
+      
+      document.getElementById('ui-dimmer').style.opacity = '1';
       m.style.display = 'block';
+      setTimeout(() => m.classList.add('active'), 10); // Piccolo delay per triggerare l'animazione CSS
+    }
+
+    window.closeTutorial = function() {
+      const m = document.getElementById('tutorial-modal');
+      document.getElementById('ui-dimmer').style.opacity = '0';
+      m.classList.remove('active');
+      setTimeout(() => m.style.display = 'none', 300); // Aspetta la fine della transizione
     }
 
     window.emergencyMute = () => { 
       Tone.Destination.mute = !Tone.Destination.mute; let btn = document.getElementById('panic');
       btn.innerText = Tone.Destination.mute ? "⚠ SBLOCCA MOTORI" : "⚠ TAGLIO MOTORI"; 
-      if(Tone.Destination.mute) btn.style.background = "#ff0032"; else btn.style.background = "rgba(255, 0, 50, 0.2)";
+      if(Tone.Destination.mute) {
+        btn.style.background = "#ff0032"; btn.style.color = "#fff"; btn.style.textShadow = "none";
+      } else {
+        btn.style.background = "rgba(255, 0, 50, 0.15)"; btn.style.color = "#fff"; btn.style.textShadow = "0 0 8px #ff0032";
+      }
     };
 
     function windowResized() { resizeCanvas(windowWidth, windowHeight); }
