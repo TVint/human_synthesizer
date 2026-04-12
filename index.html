@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // HOLOGRAM HELMET EDITION</title>
+  <title>VOID RIDER // CYBER COCKPIT EDITION</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -22,8 +22,8 @@
 
     #galaxy-bg {
       position: fixed; top: -20%; left: -20%; width: 140%; height: 140%; z-index: 1;
-      background: url('https://res.cloudinary.com/dkni7ncod/image/upload/q_auto/f_auto/v1775955501/galaxy_n7qawo.jpg') center/cover no-repeat;
-      opacity: 0.6; animation: galaxySpin 150s infinite linear; pointer-events: none;
+      background: url('https://images.pexels.com/photos/1341279/pexels-photo-1341279.jpeg') center/cover no-repeat;
+      opacity: 0.4; animation: galaxySpin 150s infinite linear; pointer-events: none;
     }
     @keyframes galaxySpin {
       0% { transform: scale(1.5) rotate(0deg); }
@@ -31,7 +31,7 @@
     }
 
     /* =============================================================
-      UI LAYER - AREA WEB DESIGN 
+      UI LAYER HTML 
       ============================================================= */
     #ui-layer { 
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
@@ -106,7 +106,7 @@
   <div id="ui-layer">
     <div id="boot-screen">
       <h1>VOID RIDER</h1>
-      <p id="boot-status">Avvio Motori Neurali (FaceMesh & BodyPix) in corso...</p>
+      <p id="boot-status">Avvio Moduli AI (FaceMesh & BodyPix) in corso. Potrebbe richiedere 10-15 secondi...</p>
       <button class="btn" id="action-btn" disabled>ATTENDERE...</button>
     </div>
 
@@ -164,13 +164,34 @@
     let video, facemesh, bodypix;
     let predictions = [];
     let segmentationMask = null;
-    let maskedBuffer; // Buffer per rimuovere lo sfondo
+    let personBuffer; 
 
     let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
     let stars = [];
+    let customHelmetImg; 
 
-    // Setup iniziale
+    // HUD DIMENSIONS
+    const HUD_W = 600;
+    const HUD_H = 700;
+
+    const silhouetteIndices = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
+
+    class Star {
+      constructor() { this.x = random(-width, width); this.y = random(-height, height); this.z = random(width); this.pz = this.z; }
+      update(speed) { this.z -= speed; if (this.z < 1) { this.z = width; this.x = random(-width, width); this.y = random(-height, height); this.pz = this.z; } }
+      show() {
+        let sx = map(this.x / this.z, 0, 1, 0, width); let sy = map(this.y / this.z, 0, 1, 0, height);
+        let px = map(this.x / this.pz, 0, 1, 0, width); let py = map(this.y / this.pz, 0, 1, 0, height);
+        this.pz = this.z;
+        stroke(200, 255, 255, map(this.z, 0, width, 255, 0)); strokeWeight(map(this.z, 0, width, 3, 0)); line(px, py, sx, sy);
+      }
+    }
+
+    function preload() {
+      customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
+    }
+
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.style('position', 'fixed');
@@ -178,21 +199,16 @@
       canvas.style('left', '0');
       canvas.style('z-index', '10'); 
 
-      // Buffer olografico per la persona scalato a 800x600 per mostrare fino al petto
-      maskedBuffer = createGraphics(800, 600);
+      personBuffer = createGraphics(800, 600); 
 
-      for (let i = 0; i < 500; i++) stars.push(new Star());
+      for (let i = 0; i < 300; i++) stars.push(new Star());
 
       video = createCapture(VIDEO, () => {
         video.size(640, 480);
         
-        // 1. Inizializza FaceMesh
-        facemesh = ml5.facemesh(video, () => {
-          facemeshReady = true; checkAI();
-        });
+        facemesh = ml5.facemesh(video, () => { facemeshReady = true; checkAI(); });
         facemesh.on("predict", r => predictions = r);
 
-        // 2. Inizializza BodyPix (per rimuovere lo sfondo)
         const bpOptions = { multiplier: 0.5, outputStride: 16, segmentationThreshold: 0.5 };
         bodypix = ml5.bodyPix(video, bpOptions, () => {
           bodypixReady = true; checkAI();
@@ -206,23 +222,15 @@
       if (facemeshReady && bodypixReady) {
         videoReady = true;
         document.getElementById('boot-status').innerText = "AI Visiva & Segmentazione Operative. In attesa di consenso Audio.";
-        let btn = document.getElementById('action-btn');
-        btn.innerText = "ESTABLISH LINK";
-        btn.disabled = false;
+        let btn = document.getElementById('action-btn'); btn.innerText = "ESTABLISH LINK"; btn.disabled = false;
       }
     }
 
-    // Loop asincrono continuo per aggiornare la maschera del corpo
     function gotSegmentation(error, result) {
-      if (result && result.personMask) {
-        segmentationMask = result.personMask;
-      }
-      if (videoReady) {
-        bodypix.segment(video, gotSegmentation);
-      }
+      if (result && result.personMask) segmentationMask = result.personMask;
+      if (videoReady) bodypix.segment(video, gotSegmentation);
     }
 
-    // --- AUDIO CALIBRATO ---
     document.getElementById('mic-gain').addEventListener('input', (e) => {
       let val = e.target.value; document.getElementById('gain-val').innerText = '+' + val + 'dB';
       if(preAmp) preAmp.volume.rampTo(parseFloat(val), 0.1);
@@ -239,20 +247,15 @@
         const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false } });
         const mic = Tone.getContext().rawContext.createMediaStreamSource(stream);
 
-        let gainVal = document.getElementById('mic-gain').value;
-        let gateVal = document.getElementById('noise-gate').value;
+        let gainVal = document.getElementById('mic-gain').value; let gateVal = document.getElementById('noise-gate').value;
 
-        noiseGate = new Tone.Gate(parseFloat(gateVal), 0.1); 
-        preAmp = new Tone.Volume(parseFloat(gainVal)); 
-        antiLarsenEQ = new Tone.EQ3(0, 0, -15);
-        
+        noiseGate = new Tone.Gate(parseFloat(gateVal), 0.1); preAmp = new Tone.Volume(parseFloat(gainVal)); antiLarsenEQ = new Tone.EQ3(0, 0, -15);
         meter = new Tone.Meter(); analyzer = new Tone.Waveform(256); 
         pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0;
         
         vocoderBit = new Tone.BitCrusher(4); vocoderBit.wet.value = 0;
-        vocoderWah = new Tone.AutoWah({
-          baseFrequency: 250, octaves: 4.5, sensitivity: 5, Q: 6, gain: 3, follower: { attack: 0.05, release: 0.3 }
-        }); vocoderWah.wet.value = 0;
+        vocoderWah = new Tone.AutoWah({ baseFrequency: 250, octaves: 4.5, sensitivity: 5, Q: 6, gain: 3, follower: { attack: 0.05, release: 0.3 } });
+        vocoderWah.wet.value = 0;
         
         flanger = new Tone.Chorus({ frequency: 0.1, delayTime: 2.5, depth: 0.8, feedback: 0.85 }).start(); flanger.wet.value = 0; 
         spaceDelay = new Tone.FeedbackDelay("8n", 0.4); spaceDelay.wet.value = 0;
@@ -265,16 +268,13 @@
 
         audioReady = true;
 
-        document.getElementById('boot-screen').style.opacity = '0';
-        setTimeout(() => document.getElementById('boot-screen').style.display = 'none', 500);
+        document.getElementById('boot-screen').style.opacity = '0'; setTimeout(() => document.getElementById('boot-screen').style.display = 'none', 500);
         document.getElementById('panic').style.display = 'block'; document.getElementById('dev-panel').style.display = 'flex';
         document.getElementById('telemetry-left').style.display = 'block'; document.getElementById('system-right').style.display = 'block';
         document.getElementById('hud-bottom').style.display = 'flex'; document.querySelectorAll('.hotspot').forEach(el => el.style.display = 'flex');
-
       } catch (err) { alert("Errore microfono: " + err.message); }
     });
 
-    // --- LOOP GRAFICO (CORE AGGIORNATO) ---
     function draw() {
       clear(); 
       if (!videoReady || !audioReady) return;
@@ -282,19 +282,12 @@
       let db = meter.getValue(); let vol = map(db, -35, -5, 0, 1, true);
       aggiornaInterfacciaHTML(db, vol);
 
-      // Mappatura movimenti testa
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
-        let nX = (pts[1][0] - video.width/2) / (video.width/2); 
-        let nY = (pts[1][1] - video.height/2) / (video.height/2);
-
-        let mDist = dist(pts[13][0], pts[13][1], pts[14][0], pts[14][1]);
-        cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.2);
-        spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
+        let nX = (pts[1][0] - video.width/2) / (video.width/2); let nY = (pts[1][1] - video.height/2) / (video.height/2);
 
         let tPitch = 0, tVocoder = 0, tFlange = 0;
-        if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); 
-        else if (nX > 0.15) tVocoder = map(nX, 0.15, 0.4, 0, 1, true); 
+        if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); else if (nX > 0.15) tVocoder = map(nX, 0.15, 0.4, 0, 1, true); 
         if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true); 
         
         cPitch = lerp(cPitch, tPitch, 0.2); pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
@@ -302,104 +295,115 @@
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
       }
 
-      // Sfondo Stelle Lontane
       push(); translate(width/2, height/2);
-      let warpSpeed = map(cFlange, 0, 1, 1, 80); 
-      for (let s of stars) { s.update(warpSpeed); s.show(); }
+      let warpSpeed = map(cFlange, 0, 1, 1, 80); for (let s of stars) { s.update(warpSpeed); s.show(); }
       pop();
 
-      // Oscilloscopio
-      let wave = analyzer.getValue();
-      let cOsc = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
+      let wave = analyzer.getValue(); let cOsc = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       push(); translate(width/2, 100); stroke(cOsc); strokeWeight(2); noFill();
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -250, 250), wave[i] * 60); } endShape();
       fill(0, 255, 255, 10); noStroke(); ellipse(0, 0, 500, 40); pop();
 
-      // --- IL NUOVO CASCO OLOGRAFICO ---
       push();
       let shake = vol > 0.85 ? random(-15, 15) : 0;
       translate(width/2 + shake, height/2 + shake);
 
       drawFluidSynapses();
 
-      // HUD Finestra Principale (Più grande per mostrare il petto)
-      let hudW = 500; let hudH = 600;
-      
       drawingContext.save();
-      beginShape();
-      vertex(-hudW/2 + 50, -hudH/2); vertex(hudW/2 - 50, -hudH/2);
-      vertex(hudW/2, -hudH/2 + 50); vertex(hudW/2, hudH/2 - 50);
-      vertex(hudW/2 - 50, hudH/2); vertex(-hudW/2 + 50, hudH/2);
-      vertex(-hudW/2, hudH/2 - 50); vertex(-hudW/2, -hudH/2 + 50);
+      beginShape(); // HUD OTTANGONALE
+      vertex(-HUD_W/2 + 50, -HUD_H/2); vertex(HUD_W/2 - 50, -HUD_H/2);
+      vertex(HUD_W/2, -HUD_H/2 + 50); vertex(HUD_W/2, HUD_H/2 - 50);
+      vertex(HUD_W/2 - 50, HUD_H/2); vertex(-HUD_W/2 + 50, HUD_H/2);
+      vertex(-HUD_W/2, HUD_H/2 - 50); vertex(-HUD_W/2, -HUD_H/2 + 50);
       endShape(CLOSE);
       drawingContext.clip();
 
-      // Disegna Griglia Neon nel "Vuoto" lasciato dallo sfondo rimosso
-      drawNeonGrid();
+      // ==========================================
+      // 1. SFONDO CABINA DI PILOTAGGIO (DIETRO)
+      // ==========================================
+      drawCyberCockpit(cPitch, cVocoder, cFlange, vol);
 
-      // Processo di Mascheratura Video (BodyPix)
-      maskedBuffer.clear();
-      // Scaliamo il video 640x480 a 800x600 per inquadrare petto e spalle
-      maskedBuffer.image(video, 0, 0, 800, 600); 
-      
+      // ==========================================
+      // 2. MASCHERATURA PERSONA (IN MEZZO)
+      // ==========================================
+      personBuffer.clear();
+      personBuffer.image(video, 0, 0, 800, 600); 
       if (segmentationMask) {
-        // Applica il filtro destination-in: mantiene i pixel solo dove c'è la persona!
-        maskedBuffer.drawingContext.globalCompositeOperation = 'destination-in';
-        maskedBuffer.image(segmentationMask, 0, 0, 800, 600);
-        maskedBuffer.drawingContext.globalCompositeOperation = 'source-over';
+        personBuffer.drawingContext.globalCompositeOperation = 'destination-in';
+        personBuffer.image(segmentationMask, 0, 0, 800, 600);
+        personBuffer.drawingContext.globalCompositeOperation = 'source-over';
       }
 
-      // Renderizza la persona mascherata con gli effetti Glitch attivi
       push(); scale(-1, 1); 
       let rO = map(cPitch, 0, 24, 0, 30);
       blendMode(SCREEN);
-      tint(255, 0, 50, 200); image(maskedBuffer, -400 - rO, -300, 800, 600);
-      tint(0, 255, 255, 200); image(maskedBuffer, -400 + rO, -300, 800, 600);
-      tint(255, 255, 255, 255); image(maskedBuffer, -400, -300, 800, 600);
+      tint(255, 0, 50, 200); image(personBuffer, -400 - rO, -200, 800, 600);
+      tint(0, 255, 255, 200); image(personBuffer, -400 + rO, -200, 800, 600);
+      tint(255, 255, 255, 255); image(personBuffer, -400, -200, 800, 600);
       blendMode(BLEND);
       pop();
-      
-      // Reticolo di Tracciamento AI (Disegnato sul naso per confermare il tracking)
+
+      // TRACCIAMENTO FACCIALE SUL NASO
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
-        // Mappa le coordinate 640x480 alla nuova scala 800x600 e specchia
-        let nX = -((pts[1][0] / 640) * 800 - 400); 
-        let nY = (pts[1][1] / 480) * 600 - 300;
+        let nX = -((pts[1][0] / 640) * 800 - 400); let nY = (pts[1][1] / 480) * 600 - 200;
         stroke(0, 255, 255, 150); strokeWeight(1.5); noFill();
         ellipse(nX, nY, 40, 40); line(nX-30, nY, nX+30, nY); line(nX, nY-30, nX, nY+30);
       }
 
       drawingContext.restore(); 
 
-      // Bordo Sovrapposto (L'intelaiatura del Casco)
-      drawHelmetOverlay(hudW, hudH);
+      // ==========================================
+      // 3. OVERLAY CASCO (DAVANTI)
+      // ==========================================
+      drawHelmetOverlay(HUD_W, HUD_H);
       pop();
     }
 
-    // --- FUNZIONI GRAFICHE EXTRA ---
-    function drawNeonGrid() {
+    function drawCyberCockpit(pitchParam, vocoderParam, flangeParam, volParam) {
       push();
-      background(5, 0, 15, 200); // Sfondo scuro e profondo
-      stroke(255, 0, 255, 120);  // Fucsia synthwave
-      strokeWeight(2);
+      background(5, 10, 20); // Interno cabina scuro
       
-      let gridY = 80; // Orizzonte abbassato
+      let horizon = 50; 
+      let t = frameCount * (1 + flangeParam * 3); // Flanger accelera la nave
       
-      // Sole Cibernetico
-      noStroke(); fill(0, 255, 255, 40); ellipse(0, gridY, 250, 120); fill(0, 255, 255, 80); ellipse(0, gridY, 120, 60);
-      
-      stroke(0, 255, 255, 100);
-      let t = (frameCount * 1.5) % 40;
-      
-      // Linee orizzontali in movimento
+      // Sole lontano
+      noStroke(); fill(0, 255, 255, 40); ellipse(0, horizon, 200, 100); fill(0, 255, 255, 80); ellipse(0, horizon, 100, 50);
+
+      // Griglia Pavimento Neon
+      strokeWeight(2); stroke(0, 255, 255, 80);
       for (let i = 0; i < 15; i++) {
-        let y = gridY + pow(i + (t/40), 2) * 2;
-        if (y < 350) { line(-400, y, 400, y); }
+        let y = horizon + pow(i + ((t*0.5)%20)/20, 2) * 2;
+        if (y < HUD_H/2) line(-HUD_W/2, y, HUD_W/2, y);
       }
-      // Linee verticali prospettiche
       for (let i = -10; i <= 10; i++) {
-        let xBase = i * 40; let xBottom = i * 200;
-        line(xBase, gridY, xBottom, 350);
+        let xBase = i * 30; let xBottom = i * 150; line(xBase, horizon, xBottom, HUD_H/2);
+      }
+
+      // PANNELLO LATERALE DESTRO (PITCH)
+      push(); translate(HUD_W/2 - 80, 0);
+      stroke(0, 255, 255, 100); fill(0, 15, 30, 200); rect(-40, -150, 80, 300, 5);
+      // Indicatore Pitch
+      let pY = map(pitchParam, 0, 24, 140, -140);
+      noStroke(); fill(0, 150, 255, 100); rect(-20, pY, 40, 140 - pY);
+      stroke(0, 255, 255); strokeWeight(3); line(-30, pY, 30, pY);
+      pop();
+
+      // PANNELLO LATERALE SINISTRO (VOCODER)
+      push(); translate(-HUD_W/2 + 80, 0);
+      stroke(0, 255, 255, 100); fill(0, 15, 30, 200); rect(-40, -150, 80, 300, 5);
+      // Indicatore Vocoder (Diventa Fucsia quando attivo)
+      let vCol = lerpColor(color(0, 255, 255, 50), color(255, 0, 255, 200), vocoderParam);
+      noStroke(); fill(vCol); 
+      let pulse = sin(frameCount * 0.2) * 10 * vocoderParam;
+      rect(-20 - pulse, -100 - pulse, 40 + pulse*2, 200 + pulse*2, 5);
+      pop();
+
+      // SPIE ALLARME VOLUME
+      if (volParam > 0.85) {
+        fill(255, 0, 50, 150); noStroke();
+        rect(-HUD_W/2, -HUD_H/2, HUD_W, 20); rect(-HUD_W/2, HUD_H/2 - 20, HUD_W, 20);
       }
       pop();
     }
@@ -411,40 +415,25 @@
       vertex(-w/2 + 50, -h/2); vertex(w/2 - 50, -h/2); vertex(w/2, -h/2 + 50); vertex(w/2, h/2 - 50);
       vertex(w/2 - 50, h/2); vertex(-w/2 + 50, h/2); vertex(-w/2, h/2 - 50); vertex(-w/2, -h/2 + 50);
       endShape(CLOSE);
-      // Dettagli tecnici HUD
+      // Mirini e dettagli HUD
       strokeWeight(1); fill(0, 255, 255, 50);
-      rect(-w/2, -20, 15, 40); rect(w/2 - 15, -20, 15, 40);
+      rect(-w/2 + 60, -h/2 + 20, 40, 10); rect(w/2 - 100, -h/2 + 20, 40, 10);
+      line(-20, 0, 20, 0); line(0, -20, 0, 20); ellipse(0,0, 100,100);
       pop();
-    }
-
-    class Star {
-      constructor() { this.x = random(-width, width); this.y = random(-height, height); this.z = random(width); this.pz = this.z; }
-      update(speed) { this.z -= speed; if (this.z < 1) { this.z = width; this.x = random(-width, width); this.y = random(-height, height); this.pz = this.z; } }
-      show() {
-        let sx = map(this.x / this.z, 0, 1, 0, width); let sy = map(this.y / this.z, 0, 1, 0, height);
-        let px = map(this.x / this.pz, 0, 1, 0, width); let py = map(this.y / this.pz, 0, 1, 0, height);
-        this.pz = this.z;
-        stroke(200, 255, 255, map(this.z, 0, width, 255, 0)); strokeWeight(map(this.z, 0, width, 3, 0)); line(px, py, sx, sy);
-      }
     }
 
     function aggiornaInterfacciaHTML(db, vol) {
       document.getElementById('txt-grav').innerText = `> GRAVITÀ_X: +${cPitch.toFixed(1)} ST`;
       document.getElementById('txt-vocoder').innerText = `> VOCODER_SYNTH: ${(cVocoder*100).toFixed(0)}%`;
       document.getElementById('txt-jet').innerText = `> JET_FLANGE: ${(cFlange*100).toFixed(0)}%`;
-      
-      let peakText = (db === -Infinity) ? "-INF" : db.toFixed(1);
-      document.getElementById('txt-peak').innerText = `MIC.PEAK: [${peakText} dB]`;
+      let peakText = (db === -Infinity) ? "-INF" : db.toFixed(1); document.getElementById('txt-peak').innerText = `MIC.PEAK: [${peakText} dB]`;
 
       let vuFill = document.getElementById('vu-meter-fill'); let statusText = document.getElementById('hud-status');
-      let isCritical = vol > 0.85; 
-
-      vuFill.style.width = (vol * 100) + '%';
-      if (isCritical) {
-        vuFill.style.background = '#ff0032'; statusText.style.color = '#ff0032';
+      if (vol > 0.85) {
+        vuFill.style.width = (vol * 100) + '%'; vuFill.style.background = '#ff0032'; statusText.style.color = '#ff0032';
         statusText.innerText = (frameCount % 10 < 5) ? "⚠ INTEGRITÀ CRITICA ⚠" : "OVERLOAD"; document.body.classList.add('alert-state');
       } else {
-        vuFill.style.background = '#0ff'; statusText.style.color = '#0ff';
+        vuFill.style.width = (vol * 100) + '%'; vuFill.style.background = '#0ff'; statusText.style.color = '#0ff';
         statusText.innerText = "SISTEMA AUDIO PRIMARIO"; document.body.classList.remove('alert-state');
       }
     }
@@ -461,9 +450,7 @@
           noStroke(); fill(activeColor); ellipse(px, py, 15 + intensity*10, 15 + intensity*10); fill(255); ellipse(px, py, 6, 6); noFill();
         }
       }
-      streamFluid(0, -height/2, cFlange, color(255, 200, 0)); 
-      streamFluid(-width/2, 0, cVocoder, color(255, 0, 255)); 
-      streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); 
+      streamFluid(0, -height/2, cFlange, color(255, 200, 0)); streamFluid(-width/2, 0, cVocoder, color(255, 0, 255)); streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); 
     }
 
     window.showTutorial = function(type) {
