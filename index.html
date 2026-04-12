@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // ALERT SYSTEM FIXED</title>
+  <title>VOID RIDER // VOCODER EDITION</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -91,7 +91,6 @@
     #vu-meter-fill { width: 0%; height: 100%; background: #0ff; transition: width 0.1s, background 0.1s; }
     #hud-status { font-size: 1.1rem; font-weight: bold; letter-spacing: 2px; transition: color 0.2s;}
 
-    /* Allarme Rosso (Ora si attiverà perfettamente!) */
     .alert-state { background: rgba(255, 0, 50, 0.3) !important; box-shadow: inset 0 0 100px rgba(255,0,50,0.5); }
 
     #tutorial-modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 5, 10, 0.95); border: 2px solid #0ff; box-shadow: 0 0 50px #0ff; padding: 40px; z-index: 9000; display: none; width: 500px; text-align: center; border-radius: 5px; pointer-events: auto; }
@@ -124,7 +123,7 @@
 
     <div id="telemetry-left" class="hud-text">
       <div id="txt-grav">> GRAVITÀ_X: +0.0 ST</div>
-      <div id="txt-alien">> ALIEN_MOD: 0%</div>
+      <div id="txt-vocoder">> VOCODER_SYNTH: 0%</div>
       <div id="txt-jet">> JET_FLANGE: 0%</div>
     </div>
 
@@ -143,7 +142,7 @@
     <button id="panic" onclick="window.emergencyMute()">⚠ TAGLIO MOTORI</button>
     
     <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[ FLANGER ]</div>
-    <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">[ ALIEN ]</div>
+    <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')">[ VOCODER ]</div>
     <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')">[ PITCH ]</div>
 
     <div id="tutorial-modal">
@@ -158,8 +157,9 @@
     let audioReady = false;
 
     let video, facemesh, predictions = [];
-    let preAmp, noiseGate, antiLarsenEQ, pitchShift, ringModAlien, flanger, spaceDelay, spaceReverb, meter, analyzer;
-    let cPitch = 0, cAlien = 0, cFlange = 0, cSpace = 0;
+    // Modificate variabili per Vocoder
+    let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
+    let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
     let stars = [];
     let customHelmetImg; 
 
@@ -178,7 +178,6 @@
     }
 
     function preload() {
-      // Inserisci l'URL del tuo elmetto grafico qui
       customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
     }
 
@@ -216,7 +215,6 @@
       if(noiseGate) noiseGate.threshold = parseFloat(val);
     });
 
-    // --- INIZIALIZZAZIONE AUDIO ---
     document.getElementById('action-btn').addEventListener('click', async () => {
       try {
         await Tone.start();
@@ -234,7 +232,24 @@
         analyzer = new Tone.Waveform(256); 
         
         pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0;
-        ringModAlien = new Tone.FrequencyShifter(150); ringModAlien.wet.value = 0;
+        
+        // --- IL NUOVO MOTORE VOCODER ---
+        // 1. Diamo un effetto "elettrico" e ronzante simile al dente di sega
+        vocoderBit = new Tone.BitCrusher(4); 
+        vocoderBit.wet.value = 0;
+        
+        // 2. Il cuore del Vocoder: un envelope follower che anima il filtro con la tua bocca
+        vocoderWah = new Tone.AutoWah({
+          baseFrequency: 100,
+          octaves: 5,
+          sensitivity: 0,
+          Q: 5, // Risonanza alta per esaltare l'effetto "parlato" sintetico
+          gain: 10,
+          follower: { attack: 0.05, release: 0.2 }
+        });
+        vocoderWah.wet.value = 0;
+        // -------------------------------
+
         flanger = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.65 }).start(); flanger.wet.value = 0; 
         
         spaceDelay = new Tone.FeedbackDelay("8n", 0.4); spaceDelay.wet.value = 0;
@@ -242,16 +257,13 @@
 
         let masterLimiter = new Tone.Limiter(-5); 
 
-        // --- NUOVO ROUTING ---
-        // Ora il meter e l'analyzer sono collegati ALLA FINE (al masterLimiter)
-        // Così "ascoltano" tutto il caos degli effetti, non solo la voce pulita!
+        // Routing aggiornato per includere vocoderBit e vocoderWah
         Tone.connect(mic, noiseGate);
         noiseGate.connect(preAmp);
         preAmp.connect(antiLarsenEQ);
         antiLarsenEQ.connect(pitchShift); 
-        pitchShift.chain(ringModAlien, flanger, spaceDelay, spaceReverb, masterLimiter);
+        pitchShift.chain(vocoderBit, vocoderWah, flanger, spaceDelay, spaceReverb, masterLimiter);
         
-        // I sensori ascoltano il Limiter e lo mandano alle casse
         masterLimiter.connect(analyzer);
         masterLimiter.connect(meter);
         masterLimiter.connect(Tone.Destination);
@@ -271,14 +283,11 @@
       } catch (err) { alert("Errore microfono: " + err.message); }
     });
 
-    // --- LOOP GRAFICO ---
     function draw() {
       clear(); 
       if (!videoReady || !audioReady) return;
 
       let db = meter.getValue();
-      // Ho ricalibrato la scala: il Limiter è a -5dB. Mappiamo da -35 a -5.
-      // Così il "vol" tocca 1.0 esattamente quando il suono sbatte contro il limite di sicurezza.
       let vol = map(db, -35, -5, 0, 1, true);
 
       aggiornaInterfacciaHTML(db, vol);
@@ -292,15 +301,16 @@
         cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.2);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
 
-        let tPitch = 0, tAlien = 0;
+        let tPitch = 0, tVocoder = 0;
         if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); 
-        else if (nX > 0.05) tAlien = map(nX, 0.05, 0.4, 0, 1, true); 
+        else if (nX > 0.05) tVocoder = map(nX, 0.05, 0.4, 0, 1, true); 
         
         cPitch = lerp(cPitch, tPitch, 0.2); 
         pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
         
-        cAlien = lerp(cAlien, tAlien, 0.2); 
-        ringModAlien.wet.value = cAlien; 
+        cVocoder = lerp(cVocoder, tVocoder, 0.2); 
+        vocoderWah.wet.value = cVocoder; 
+        vocoderBit.wet.value = cVocoder; 
 
         let tFlange = 0;
         if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true); 
@@ -319,7 +329,6 @@
       fill(0, 255, 255, 10); noStroke(); ellipse(0, 0, 500, 40); pop();
 
       push();
-      // Tremolio fotonico se il volume sale oltre l'85% (Larsen in corso)
       let shake = vol > 0.85 ? random(-15, 15) : 0;
       translate(width/2 + shake, height/2 + shake);
 
@@ -361,16 +370,15 @@
 
     function aggiornaInterfacciaHTML(db, vol) {
       document.getElementById('txt-grav').innerText = `> GRAVITÀ_X: +${cPitch.toFixed(1)} ST`;
-      document.getElementById('txt-alien').innerText = `> ALIEN_MOD: ${(cAlien*100).toFixed(0)}%`;
+      document.getElementById('txt-vocoder').innerText = `> VOCODER_SYNTH: ${(cVocoder*100).toFixed(0)}%`;
       document.getElementById('txt-jet').innerText = `> JET_FLANGE: ${(cFlange*100).toFixed(0)}%`;
       
-      // db.toFixed(1) ora gestisce anche -Infinity in modo sicuro
       let peakText = (db === -Infinity) ? "-INF" : db.toFixed(1);
       document.getElementById('txt-peak').innerText = `MIC.PEAK: [${peakText} dB]`;
 
       let vuFill = document.getElementById('vu-meter-fill');
       let statusText = document.getElementById('hud-status');
-      let isCritical = vol > 0.85; // Se la barra supera l'85% scatta l'allarme
+      let isCritical = vol > 0.85; 
 
       vuFill.style.width = (vol * 100) + '%';
 
@@ -406,7 +414,7 @@
         }
       }
       streamFluid(0, -height/2, cFlange, color(255, 200, 0)); 
-      streamFluid(-width/2, 0, cAlien, color(255, 0, 255));  
+      streamFluid(-width/2, 0, cVocoder, color(255, 0, 255)); // Mantenuto il fucsia per il Vocoder
       streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); 
     }
 
@@ -426,7 +434,7 @@
 
     window.showTutorial = function(type) {
       const m = document.getElementById('tutorial-modal'); const t = document.getElementById('tut-title'); const d = document.getElementById('tut-desc');
-      if(type==='LEFT') { t.innerText="MODULAZIONE ALIENA"; d.innerText="Sposta la testa a SINISTRA. Attiva il modulatore ad anello spaziale."; }
+      if(type==='LEFT') { t.innerText="VOCODER SYNTH"; d.innerText="Sposta la testa a SINISTRA. Attiva il tracciamento dei formanti e la sintesi vocale."; }
       if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Sposta la testa a DESTRA. Elimina la gravità vocale."; }
       if(type==='UP')   { t.innerText="WARP FLANGER"; d.innerText="Guarda in ALTO. Innesca il reattore al plasma."; }
       m.style.display = 'block';
