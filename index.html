@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // PRO HUD EDITION</title>
+  <title>VOID RIDER // MASTER BUILD</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -35,11 +35,11 @@
       z-index: 100; pointer-events: none; 
     }
 
-    /* Dimmer Layer per far risaltare il Modal */
+    /* Dimmer Layer */
     #ui-dimmer {
       position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
       background: rgba(0, 5, 15, 0.85); z-index: 90; opacity: 0; pointer-events: none;
-      transition: opacity 0.4s ease; backdrop-filter: blur(3px);
+      transition: opacity 0.4s ease; backdrop-filter: blur(4px);
     }
 
     #boot-screen {
@@ -54,39 +54,25 @@
     .btn:hover:not(:disabled) { background: #0ff; color: #000; box-shadow: 0 0 30px #0ff; }
     .btn:disabled { opacity: 0.5; border-color: #555; color: #aaa; cursor: not-allowed; background: transparent; }
 
+    /* LAYOUT A 150px */
     #panic {
       position: absolute; top: 30px; right: 150px; display: none; pointer-events: auto;
-      background: rgba(255, 0, 50, 0.15); color: #fff; border: 2px solid #ff0032; text-shadow: 0 0 8px #ff0032;
+      background: rgba(255, 0, 50, 0.2); color: #fff; border: 2px solid #ff0032; text-shadow: 0 0 8px #ff0032;
       padding: 15px 30px; cursor: pointer; font-weight: bold; font-size: 1.2rem; transition: 0.2s; border-radius: 3px; letter-spacing: 2px;
       z-index: 80;
     }
-    #panic:hover { background: #ff0032; color: #000; box-shadow: 0 0 30px #ff0032; text-shadow: none; }
-
-    .hotspot {
-      position: absolute; display: none; pointer-events: auto; cursor: pointer;
-      background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
-      justify-content: center; align-items: center; text-align: center; color: rgba(0,255,255,0.4); font-size: 1.2rem; font-weight: bold; transition: 0.3s;
-      z-index: 80;
-    }
-    .hotspot:hover { background: rgba(0, 255, 255, 0.2); border: 1px solid #0ff; color: #0ff; text-shadow: 0 0 10px #0ff; }
-    
-    #hs-top { top: 20px; left: 50%; transform: translateX(-50%); width: 400px; height: 60px; }
-    #hs-left { top: 10%; left: 20px; width: 80px; height: 80%; }
-    #hs-right { top: 10%; right: 20px; width: 80px; height: 80%; }
-
-    .hs-text-left { display: inline-block; transform: rotate(-90deg); white-space: nowrap; letter-spacing: 5px; }
-    .hs-text-right { display: inline-block; transform: rotate(90deg); white-space: nowrap; letter-spacing: 5px; }
+    #panic:hover { background: #ff0032; color: #fff; box-shadow: 0 0 30px #ff0032; text-shadow: 0 0 15px #fff; }
 
     #dev-panel {
-      position: absolute; bottom: 30px; left: 150px; width: 280px; display: none;
+      position: absolute; bottom: 30px; left: 150px; width: 250px; display: none;
       background: rgba(0, 10, 25, 0.9); border: 1px solid #0ff; padding: 20px;
       flex-direction: column; gap: 15px; pointer-events: auto;
       box-shadow: 0 0 20px rgba(0, 255, 255, 0.2); border-radius: 5px; backdrop-filter: blur(5px);
       z-index: 80;
     }
     #dev-panel h3 { margin: 0; font-size: 1rem; color: #fff; letter-spacing: 2px; text-align: center;}
-    .slider-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.9rem;}
-    input[type=range] { -webkit-appearance: none; width: 130px; background: transparent; }
+    .slider-group { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 0.85rem;}
+    input[type=range] { -webkit-appearance: none; width: 110px; background: transparent; }
     input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; height: 16px; width: 8px; background: #0ff; cursor: pointer; margin-top: -6px; }
     input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; background: rgba(0, 255, 255, 0.3); }
 
@@ -96,6 +82,22 @@
     }
     #telemetry-left { left: 150px; }
     #system-right { right: 150px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
+
+    /* HOTSPOTS */
+    .hotspot {
+      position: absolute; display: none; pointer-events: auto; cursor: pointer;
+      background: rgba(0, 255, 255, 0.05); border: 1px dashed rgba(0, 255, 255, 0.3);
+      justify-content: center; align-items: center; text-align: center; color: rgba(0,255,255,0.4); font-size: 1.2rem; font-weight: bold; transition: 0.3s;
+      z-index: 80; overflow: hidden;
+    }
+    .hotspot:hover { background: rgba(0, 255, 255, 0.2); border: 1px solid #0ff; color: #0ff; text-shadow: 0 0 10px #0ff; }
+    
+    #hs-top { top: 20px; left: 50%; transform: translateX(-50%); width: 400px; height: 60px; letter-spacing: 5px;}
+    #hs-left { top: 20%; left: 20px; width: 60px; height: 60%; }
+    #hs-right { top: 20%; right: 20px; width: 60px; height: 60%; }
+
+    .hs-text-left { display: block; transform: rotate(-90deg); white-space: nowrap; letter-spacing: 5px; }
+    .hs-text-right { display: block; transform: rotate(90deg); white-space: nowrap; letter-spacing: 5px; }
 
     #hud-bottom {
       position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
@@ -111,7 +113,7 @@
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.9); 
       background: rgba(0, 5, 10, 0.95); border: 2px solid #0ff; box-shadow: 0 0 50px #0ff; 
       padding: 40px; z-index: 100; display: none; opacity: 0; width: 500px; text-align: center; 
-      border-radius: 5px; pointer-events: auto; transition: 0.3s ease;
+      border-radius: 5px; pointer-events: auto; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
     #tutorial-modal.active { transform: translate(-50%, -50%) scale(1); opacity: 1; }
   </style>
@@ -163,14 +165,13 @@
 
     <button id="panic" onclick="window.emergencyMute()">⚠ TAGLIO MOTORI</button>
     
-    <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[ WARP ]</div>
+    <div id="hs-top" class="hotspot" onclick="showTutorial('UP')">[ WARP FLANGER ]</div>
     <div id="hs-left" class="hotspot" onclick="showTutorial('LEFT')"><span class="hs-text-left">[ VOCODER ]</span></div>
-    <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')"><span class="hs-text-right">[ PITCH ]</span></div>
+    <div id="hs-right" class="hotspot" onclick="showTutorial('RIGHT')"><span class="hs-text-right">[ PITCH SHIFT ]</span></div>
 
     <div id="tutorial-modal">
-      <h2 id="tut-title" style="color:#0ff;">TITOLO</h2>
-      <p id="tut-desc" style="color:#fff; font-size:1.2rem; line-height: 1.6;">Descrizione...</p>
-      <br>
+      <h2 id="tut-title" style="color:#0ff; letter-spacing: 3px;">TITOLO</h2>
+      <p id="tut-desc" style="color:#fff; font-size:1.1rem; line-height: 1.8; margin-bottom: 30px;">Descrizione...</p>
       <button class="btn" onclick="closeTutorial()">CHIUDI</button>
     </div>
   </div>
@@ -183,12 +184,12 @@
     let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
     
-    // Arrays per lo sfondo galattico realistico
+    // SISTEMA PARTICELLARE COSMO VIVO
     let stars = [];
     let pulsars = [];
     let comets = [];
     
-    // DIMENSIONI OBLÒ
+    // DIMENSIONI OBLÒ HUD
     const HUD_W = 400;
     const HUD_H = 500;
 
@@ -209,17 +210,18 @@
       constructor() { this.x = random(-width/2, width/2); this.y = random(-height/2, height/2); this.baseSize = random(3, 8); this.speed = random(0.01, 0.05); this.offset = random(100); }
       show() {
         let s = this.baseSize + sin(frameCount * this.speed + this.offset) * (this.baseSize * 0.8);
-        noStroke(); fill(0, 150, 255, 100); ellipse(this.x, this.y, s * 4, s * 4); fill(255, 200, 255, 200); ellipse(this.x, this.y, s, s);
+        noStroke(); fill(0, 150, 255, 60); ellipse(this.x, this.y, s * 4, s * 4); 
+        fill(255, 200, 255, 150); ellipse(this.x, this.y, s, s);
       }
     }
 
     class Comet {
-      constructor() { this.reset(); }
-      reset() { this.x = random(width/2, width); this.y = random(-height, -height/2); this.speed = random(15, 30); this.length = random(50, 150); }
-      update() { this.x -= this.speed; this.y += this.speed; if(this.x < -width || this.y > height) this.reset(); }
+      constructor() { this.reset(); this.x = random(-width, width); }
+      reset() { this.x = random(width/2, width * 1.5); this.y = random(-height, -height/2); this.speed = random(15, 35); this.length = random(60, 200); }
+      update() { this.x -= this.speed; this.y += this.speed * 0.8; if(this.x < -width || this.y > height) this.reset(); }
       show() {
-        strokeWeight(2); stroke(0, 255, 255, 200); line(this.x, this.y, this.x + this.length, this.y - this.length);
-        noStroke(); fill(255); ellipse(this.x, this.y, 4, 4);
+        strokeWeight(2); stroke(0, 255, 255, 150); line(this.x, this.y, this.x + this.length, this.y - this.length * 0.8);
+        noStroke(); fill(255, 255, 255, 255); ellipse(this.x, this.y, 3, 3);
       }
     }
 
@@ -231,8 +233,8 @@
       canvas.style('z-index', '10'); 
 
       for (let i = 0; i < 400; i++) stars.push(new Star());
-      for (let i = 0; i < 15; i++) pulsars.push(new Pulsar());
-      for (let i = 0; i < 3; i++) comets.push(new Comet());
+      for (let i = 0; i < 20; i++) pulsars.push(new Pulsar());
+      for (let i = 0; i < 4; i++) comets.push(new Comet());
 
       video = createCapture(VIDEO, () => {
         video.size(640, 480);
@@ -316,10 +318,10 @@
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
       }
 
-      // --- RENDERING SFONDO GALATTICO ---
+      // --- RENDERING COSMO VIVO ---
       push(); translate(width/2, height/2);
       for(let p of pulsars) p.show();
-      let warpSpeed = map(cFlange, 0, 1, 1, 100); 
+      let warpSpeed = map(cFlange, 0, 1, 1, 120); 
       for (let s of stars) { s.update(warpSpeed); s.show(); }
       for (let c of comets) { c.update(); c.show(); }
       pop();
@@ -350,7 +352,7 @@
       drawCockpitBackground(cFlange);
 
       // ==========================================
-      // TELECAMERA TRACKING + FILTRO SCI-FI "MAPPA SFUMATURA"
+      // TRACKING CAMERA & MAPPA SFUMATURA SCI-FI
       // ==========================================
       let scaleF = 1.7; 
       let pW = 640 * scaleF; // ~1088
@@ -358,11 +360,12 @@
       
       let dX = 0; let dY = 0;
 
-      // Tracking Camera Logic con Constrain per evitare bordi neri
+      // TRACKING MATRIX FIXED: La camera ora insegue correttamente il naso
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
+        // La logica è invertita matematicamente per supportare il translate PRE-Scale
         dX = (pts[1][0] - 320) * scaleF; 
-        dY = (pts[1][1] - 240) * scaleF;
+        dY = -(pts[1][1] - 240) * scaleF;
         
         let maxDx = (pW - HUD_W) / 2; 
         let maxDy = (pH - HUD_H) / 2; 
@@ -371,38 +374,38 @@
       }
 
       push(); 
-      scale(-1, 1); // Specchia per un corretto uso della webcam
-      translate(dX, dY); // Sposta la tela per mantenere il naso al centro
+      translate(dX, dY); // Traslazione applicata PRIMA dello specchio
+      scale(-1, 1);      // Effetto Specchio
 
-      // Filtro Desaturazione base
-      drawingContext.filter = 'grayscale(100%) contrast(1.3)';
+      // Filtro Desaturazione Hard
+      drawingContext.filter = 'grayscale(100%) contrast(1.5) brightness(0.8)';
       image(video, -pW/2, -pH/2, pW, pH);
       drawingContext.filter = 'none';
 
-      // OVERLAY GRADIENTE (Effetto Mappa Sfumatura Cyberpunk)
+      // --- EFFETTO MAPPA SFUMATURA CYBERPUNK (OVERLAY STRONG) ---
       blendMode(OVERLAY);
       let grad = drawingContext.createLinearGradient(-pW/2, -pH/2, pW/2, pH/2);
-      grad.addColorStop(0, 'rgba(0, 255, 255, 0.9)'); // Ciano profondo
-      grad.addColorStop(1, 'rgba(255, 0, 255, 0.9)'); // Fucsia neon
+      grad.addColorStop(0, 'rgba(0, 255, 255, 1)'); // Ciano Assoluto
+      grad.addColorStop(1, 'rgba(255, 0, 255, 1)'); // Magenta Assoluto
       drawingContext.fillStyle = grad;
       rect(-pW/2, -pH/2, pW, pH);
       blendMode(BLEND);
 
       // Aberrazione Cromatica attiva in base al Pitch
-      let rO = map(cPitch, 0, 24, 0, 40);
+      let rO = map(cPitch, 0, 24, 0, 30);
       if(rO > 0.5) {
-        blendMode(SCREEN);
-        tint(255, 0, 50, 100); image(video, -pW/2 - rO, -pH/2, pW, pH);
-        tint(0, 255, 255, 100); image(video, -pW/2 + rO, -pH/2, pW, pH);
-        blendMode(BLEND);
-        noTint();
+        drawingContext.globalCompositeOperation = 'screen';
+        drawingContext.globalAlpha = 0.5;
+        image(video, -pW/2 - rO, -pH/2, pW, pH); // Ghost rosso/ciano simulato dallo shift
+        image(video, -pW/2 + rO, -pH/2, pW, pH);
+        drawingContext.globalAlpha = 1.0;
+        drawingContext.globalCompositeOperation = 'source-over';
       }
 
       // --- MASCHERA NEURALE SUL VOLTO ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         
-        // Maglia di Punti (Renderizza in coordinate relative al video centrato a -pW/2)
         stroke(0, 255, 255, 150); strokeWeight(2.5);
         beginShape(POINTS);
         for(let i=0; i<pts.length; i+=2) { 
@@ -410,7 +413,6 @@
         }
         endShape();
 
-        // Silhouette ed Occhi/Bocca
         noFill(); stroke(255, 0, 255, 200); strokeWeight(1.5);
         beginShape();
         for(let i of silhouetteIndices) {
@@ -421,7 +423,7 @@
       pop(); // Fine zona specchiata e traslata
 
       // Scanlines CRT sull'HUD
-      stroke(0, 255, 200, 20);
+      stroke(0, 255, 200, 25);
       strokeWeight(1.5);
       for(let i = -HUD_H/2; i < HUD_H/2; i+= 5) { line(-HUD_W/2, i, HUD_W/2, i); }
 
@@ -437,10 +439,10 @@
 
     function drawCockpitBackground(flangeParam) {
       push();
-      background(5, 10, 20, 100); 
+      background(5, 10, 20, 120); 
       let horizon = 50; 
       let t = frameCount * (1 + flangeParam * 3); 
-      strokeWeight(2); stroke(0, 255, 255, 40);
+      strokeWeight(2); stroke(0, 255, 255, 50);
       for (let i = 0; i < 15; i++) {
         let y = horizon + pow(i + ((t*0.5)%20)/20, 2) * 2;
         if (y < HUD_H/2) line(-HUD_W/2, y, HUD_W/2, y);
@@ -470,6 +472,7 @@
       rect(-10 - pulse, -80 - pulse, 20 + pulse*2, 160 + pulse*2, 3);
       pop();
 
+      // Overload Cabina
       if (volParam > 0.85) {
         fill(255, 0, 50, 150); noStroke();
         rect(-HUD_W/2, -HUD_H/2, HUD_W, 10); rect(-HUD_W/2, HUD_H/2 - 10, HUD_W, 10);
@@ -530,19 +533,19 @@
     window.showTutorial = function(type) {
       const m = document.getElementById('tutorial-modal'); const t = document.getElementById('tut-title'); const d = document.getElementById('tut-desc');
       if(type==='LEFT') { t.innerText="VOCODER SYNTH"; d.innerText="Sposta la testa a SINISTRA.\nAttiva il tracciamento dei formanti e innesca la sintesi vocale robotica."; }
-      if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Sposta la testa a DESTRA.\nInverti la polarità gravitazionale della voce alzandone il pitch."; }
+      if(type==='RIGHT'){ t.innerText="PITCH UP"; d.innerText="Sposta la testa a DESTRA.\nInverti la polarità gravitazionale della voce alzandone l'intonazione."; }
       if(type==='UP')   { t.innerText="WARP FLANGER"; d.innerText="Guarda in ALTO.\nInnesca il reattore al plasma per distorcere il tessuto spaziotemporale dell'audio."; }
       
       document.getElementById('ui-dimmer').style.opacity = '1';
       m.style.display = 'block';
-      setTimeout(() => m.classList.add('active'), 10); // Piccolo delay per triggerare l'animazione CSS
+      setTimeout(() => m.classList.add('active'), 10); 
     }
 
     window.closeTutorial = function() {
       const m = document.getElementById('tutorial-modal');
       document.getElementById('ui-dimmer').style.opacity = '0';
       m.classList.remove('active');
-      setTimeout(() => m.style.display = 'none', 300); // Aspetta la fine della transizione
+      setTimeout(() => m.style.display = 'none', 300); 
     }
 
     window.emergencyMute = () => { 
@@ -551,7 +554,7 @@
       if(Tone.Destination.mute) {
         btn.style.background = "#ff0032"; btn.style.color = "#fff"; btn.style.textShadow = "none";
       } else {
-        btn.style.background = "rgba(255, 0, 50, 0.15)"; btn.style.color = "#fff"; btn.style.textShadow = "0 0 8px #ff0032";
+        btn.style.background = "rgba(255, 0, 50, 0.2)"; btn.style.color = "#fff"; btn.style.textShadow = "0 0 8px #ff0032";
       }
     };
 
