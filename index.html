@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // AUDIO CALIBRATION FIX</title>
+  <title>VOID RIDER // HOLOGRAM HELMET EDITION</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -30,6 +30,9 @@
       100% { transform: scale(1.5) rotate(360deg); }
     }
 
+    /* =============================================================
+      UI LAYER - AREA WEB DESIGN 
+      ============================================================= */
     #ui-layer { 
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
       z-index: 100; pointer-events: none; 
@@ -80,8 +83,8 @@
       position: absolute; display: none; top: 50%; transform: translateY(-50%);
       font-size: 1.1rem; line-height: 2; color: #0ff; text-shadow: 0 0 5px #0ff;
     }
-    #telemetry-left { left: 150px; }
-    #system-right { right: 150px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
+    #telemetry-left { left: 40px; }
+    #system-right { right: 40px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
 
     #hud-bottom {
       position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
@@ -103,7 +106,7 @@
   <div id="ui-layer">
     <div id="boot-screen">
       <h1>VOID RIDER</h1>
-      <p id="boot-status">Allineamento Modulo Video & AI in corso...</p>
+      <p id="boot-status">Avvio Motori Neurali (FaceMesh & BodyPix) in corso...</p>
       <button class="btn" id="action-btn" disabled>ATTENDERE...</button>
     </div>
 
@@ -155,31 +158,19 @@
   <script>
     let videoReady = false;
     let audioReady = false;
+    let facemeshReady = false;
+    let bodypixReady = false;
 
-    let video, facemesh, predictions = [];
+    let video, facemesh, bodypix;
+    let predictions = [];
+    let segmentationMask = null;
+    let maskedBuffer; // Buffer per rimuovere lo sfondo
+
     let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
     let stars = [];
-    let customHelmetImg; 
 
-    const silhouetteIndices = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
-
-    class Star {
-      constructor() { this.x = random(-width, width); this.y = random(-height, height); this.z = random(width); this.pz = this.z; }
-      update(speed) { this.z -= speed; if (this.z < 1) { this.z = width; this.x = random(-width, width); this.y = random(-height, height); this.pz = this.z; } }
-      show() {
-        let sx = map(this.x / this.z, 0, 1, 0, width); let sy = map(this.y / this.z, 0, 1, 0, height);
-        let px = map(this.x / this.pz, 0, 1, 0, width); let py = map(this.y / this.pz, 0, 1, 0, height);
-        this.pz = this.z;
-        stroke(200, 255, 255, map(this.z, 0, width, 255, 0)); strokeWeight(map(this.z, 0, width, 3, 0));
-        line(px, py, sx, sy);
-      }
-    }
-
-    function preload() {
-      customHelmetImg = loadImage('data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'); 
-    }
-
+    // Setup iniziale
     function setup() {
       let canvas = createCanvas(windowWidth, windowHeight);
       canvas.style('position', 'fixed');
@@ -187,30 +178,58 @@
       canvas.style('left', '0');
       canvas.style('z-index', '10'); 
 
+      // Buffer olografico per la persona scalato a 800x600 per mostrare fino al petto
+      maskedBuffer = createGraphics(800, 600);
+
       for (let i = 0; i < 500; i++) stars.push(new Star());
 
       video = createCapture(VIDEO, () => {
+        video.size(640, 480);
+        
+        // 1. Inizializza FaceMesh
         facemesh = ml5.facemesh(video, () => {
-          videoReady = true;
-          document.getElementById('boot-status').innerText = "AI Visiva Operativa. In attesa di consenso Audio.";
-          let btn = document.getElementById('action-btn');
-          btn.innerText = "ESTABLISH LINK";
-          btn.disabled = false;
+          facemeshReady = true; checkAI();
         });
         facemesh.on("predict", r => predictions = r);
+
+        // 2. Inizializza BodyPix (per rimuovere lo sfondo)
+        const bpOptions = { multiplier: 0.5, outputStride: 16, segmentationThreshold: 0.5 };
+        bodypix = ml5.bodyPix(video, bpOptions, () => {
+          bodypixReady = true; checkAI();
+          bodypix.segment(video, gotSegmentation);
+        });
       });
       video.hide();
     }
 
+    function checkAI() {
+      if (facemeshReady && bodypixReady) {
+        videoReady = true;
+        document.getElementById('boot-status').innerText = "AI Visiva & Segmentazione Operative. In attesa di consenso Audio.";
+        let btn = document.getElementById('action-btn');
+        btn.innerText = "ESTABLISH LINK";
+        btn.disabled = false;
+      }
+    }
+
+    // Loop asincrono continuo per aggiornare la maschera del corpo
+    function gotSegmentation(error, result) {
+      if (result && result.personMask) {
+        segmentationMask = result.personMask;
+      }
+      if (videoReady) {
+        bodypix.segment(video, gotSegmentation);
+      }
+    }
+
+    // --- AUDIO CALIBRATO ---
     document.getElementById('mic-gain').addEventListener('input', (e) => {
-      let val = e.target.value;
-      document.getElementById('gain-val').innerText = '+' + val + 'dB';
+      let val = e.target.value; document.getElementById('gain-val').innerText = '+' + val + 'dB';
       if(preAmp) preAmp.volume.rampTo(parseFloat(val), 0.1);
     });
 
     document.getElementById('noise-gate').addEventListener('input', (e) => {
-      let val = e.target.value;
-      document.getElementById('gate-val').innerText = val + 'dB';
+      let val = e.target.value; document.getElementById('gate-val').innerText = val + 'dB';
       if(noiseGate) noiseGate.threshold = parseFloat(val);
     });
 
@@ -227,70 +246,43 @@
         preAmp = new Tone.Volume(parseFloat(gainVal)); 
         antiLarsenEQ = new Tone.EQ3(0, 0, -15);
         
-        meter = new Tone.Meter();
-        analyzer = new Tone.Waveform(256); 
-        
+        meter = new Tone.Meter(); analyzer = new Tone.Waveform(256); 
         pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0;
         
-        // --- VOCODER/WHOBBLE RICALIBRATO ---
-        vocoderBit = new Tone.BitCrusher(4); 
-        vocoderBit.wet.value = 0;
-        
+        vocoderBit = new Tone.BitCrusher(4); vocoderBit.wet.value = 0;
         vocoderWah = new Tone.AutoWah({
-          baseFrequency: 250, // Alzato per catturare le frequenze vocali, non i rimbombi bassi
-          octaves: 4.5,       
-          sensitivity: 5,     // Leggermente più sensibile per farlo aprire bene
-          Q: 6,               // Risonanza più marcata per un effetto synth più intenso
-          gain: 3,            // Gain interno moderato
-          follower: { attack: 0.05, release: 0.3 } // Rilasci rapidi per evitare l'effetto fangoso
-        });
-        vocoderWah.wet.value = 0;
+          baseFrequency: 250, octaves: 4.5, sensitivity: 5, Q: 6, gain: 3, follower: { attack: 0.05, release: 0.3 }
+        }); vocoderWah.wet.value = 0;
         
-        // --- FLANGER RICALIBRATO ---
-        // Feedback ripristinato a 0.85 per ridare l'effetto JET potente.
-        flanger = new Tone.Chorus({ frequency: 0.1, delayTime: 2.5, depth: 0.8, feedback: 0.85 }).start(); 
-        flanger.wet.value = 0; 
-        
+        flanger = new Tone.Chorus({ frequency: 0.1, delayTime: 2.5, depth: 0.8, feedback: 0.85 }).start(); flanger.wet.value = 0; 
         spaceDelay = new Tone.FeedbackDelay("8n", 0.4); spaceDelay.wet.value = 0;
         spaceReverb = new Tone.Freeverb({ roomSize: 0.75, dampening: 2500 }); spaceReverb.wet.value = 0;
-
         let masterLimiter = new Tone.Limiter(-5); 
 
-        // Routing 
-        Tone.connect(mic, noiseGate);
-        noiseGate.connect(preAmp);
-        preAmp.connect(antiLarsenEQ);
-        antiLarsenEQ.connect(pitchShift); 
+        Tone.connect(mic, noiseGate); noiseGate.connect(preAmp); preAmp.connect(antiLarsenEQ); antiLarsenEQ.connect(pitchShift); 
         pitchShift.chain(vocoderBit, vocoderWah, flanger, spaceDelay, spaceReverb, masterLimiter);
-        
-        masterLimiter.connect(analyzer);
-        masterLimiter.connect(meter);
-        masterLimiter.connect(Tone.Destination);
+        masterLimiter.connect(analyzer); masterLimiter.connect(meter); masterLimiter.connect(Tone.Destination);
 
         audioReady = true;
 
         document.getElementById('boot-screen').style.opacity = '0';
         setTimeout(() => document.getElementById('boot-screen').style.display = 'none', 500);
-        
-        document.getElementById('panic').style.display = 'block';
-        document.getElementById('dev-panel').style.display = 'flex';
-        document.getElementById('telemetry-left').style.display = 'block';
-        document.getElementById('system-right').style.display = 'block';
-        document.getElementById('hud-bottom').style.display = 'flex';
-        document.querySelectorAll('.hotspot').forEach(el => el.style.display = 'flex');
+        document.getElementById('panic').style.display = 'block'; document.getElementById('dev-panel').style.display = 'flex';
+        document.getElementById('telemetry-left').style.display = 'block'; document.getElementById('system-right').style.display = 'block';
+        document.getElementById('hud-bottom').style.display = 'flex'; document.querySelectorAll('.hotspot').forEach(el => el.style.display = 'flex');
 
       } catch (err) { alert("Errore microfono: " + err.message); }
     });
 
+    // --- LOOP GRAFICO (CORE AGGIORNATO) ---
     function draw() {
       clear(); 
       if (!videoReady || !audioReady) return;
 
-      let db = meter.getValue();
-      let vol = map(db, -35, -5, 0, 1, true);
-
+      let db = meter.getValue(); let vol = map(db, -35, -5, 0, 1, true);
       aggiornaInterfacciaHTML(db, vol);
 
+      // Mappatura movimenti testa
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
         let nX = (pts[1][0] - video.width/2) / (video.width/2); 
@@ -300,72 +292,140 @@
         cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.2);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
 
-        let tPitch = 0, tVocoder = 0;
-        
+        let tPitch = 0, tVocoder = 0, tFlange = 0;
         if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); 
         else if (nX > 0.15) tVocoder = map(nX, 0.15, 0.4, 0, 1, true); 
-        
-        cPitch = lerp(cPitch, tPitch, 0.2); 
-        pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
-        
-        cVocoder = lerp(cVocoder, tVocoder, 0.2); 
-        vocoderWah.wet.value = cVocoder; 
-        vocoderBit.wet.value = cVocoder; 
-
-        let tFlange = 0;
         if (nY < -0.05) tFlange = map(nY, -0.05, -0.4, 0, 1, true); 
+        
+        cPitch = lerp(cPitch, tPitch, 0.2); pitchShift.pitch = cPitch; pitchShift.wet.value = cPitch > 1 ? 1 : 0;
+        cVocoder = lerp(cVocoder, tVocoder, 0.2); vocoderWah.wet.value = cVocoder; vocoderBit.wet.value = cVocoder; 
         cFlange = lerp(cFlange, tFlange, 0.2); flanger.wet.value = cFlange;
       }
 
+      // Sfondo Stelle Lontane
       push(); translate(width/2, height/2);
       let warpSpeed = map(cFlange, 0, 1, 1, 80); 
       for (let s of stars) { s.update(warpSpeed); s.show(); }
       pop();
 
+      // Oscilloscopio
       let wave = analyzer.getValue();
       let cOsc = vol > 0.85 ? color(255, 0, 50) : color(0, 255, 255);
       push(); translate(width/2, 100); stroke(cOsc); strokeWeight(2); noFill();
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -250, 250), wave[i] * 60); } endShape();
       fill(0, 255, 255, 10); noStroke(); ellipse(0, 0, 500, 40); pop();
 
+      // --- IL NUOVO CASCO OLOGRAFICO ---
       push();
       let shake = vol > 0.85 ? random(-15, 15) : 0;
       translate(width/2 + shake, height/2 + shake);
 
       drawFluidSynapses();
 
-      stroke(0, 255, 255, 180); strokeWeight(4); fill(0, 5, 15, 150);
-      ellipse(0, 0, 480, 480); 
+      // HUD Finestra Principale (Più grande per mostrare il petto)
+      let hudW = 500; let hudH = 600;
       
+      drawingContext.save();
+      beginShape();
+      vertex(-hudW/2 + 50, -hudH/2); vertex(hudW/2 - 50, -hudH/2);
+      vertex(hudW/2, -hudH/2 + 50); vertex(hudW/2, hudH/2 - 50);
+      vertex(hudW/2 - 50, hudH/2); vertex(-hudW/2 + 50, hudH/2);
+      vertex(-hudW/2, hudH/2 - 50); vertex(-hudW/2, -hudH/2 + 50);
+      endShape(CLOSE);
+      drawingContext.clip();
+
+      // Disegna Griglia Neon nel "Vuoto" lasciato dallo sfondo rimosso
+      drawNeonGrid();
+
+      // Processo di Mascheratura Video (BodyPix)
+      maskedBuffer.clear();
+      // Scaliamo il video 640x480 a 800x600 per inquadrare petto e spalle
+      maskedBuffer.image(video, 0, 0, 800, 600); 
+      
+      if (segmentationMask) {
+        // Applica il filtro destination-in: mantiene i pixel solo dove c'è la persona!
+        maskedBuffer.drawingContext.globalCompositeOperation = 'destination-in';
+        maskedBuffer.image(segmentationMask, 0, 0, 800, 600);
+        maskedBuffer.drawingContext.globalCompositeOperation = 'source-over';
+      }
+
+      // Renderizza la persona mascherata con gli effetti Glitch attivi
+      push(); scale(-1, 1); 
+      let rO = map(cPitch, 0, 24, 0, 30);
+      blendMode(SCREEN);
+      tint(255, 0, 50, 200); image(maskedBuffer, -400 - rO, -300, 800, 600);
+      tint(0, 255, 255, 200); image(maskedBuffer, -400 + rO, -300, 800, 600);
+      tint(255, 255, 255, 255); image(maskedBuffer, -400, -300, 800, 600);
+      blendMode(BLEND);
+      pop();
+      
+      // Reticolo di Tracciamento AI (Disegnato sul naso per confermare il tracking)
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
-        let noseX = pts[1][0];
-        let noseY = pts[1][1];
+        // Mappa le coordinate 640x480 alla nuova scala 800x600 e specchia
+        let nX = -((pts[1][0] / 640) * 800 - 400); 
+        let nY = (pts[1][1] / 480) * 600 - 300;
+        stroke(0, 255, 255, 150); strokeWeight(1.5); noFill();
+        ellipse(nX, nY, 40, 40); line(nX-30, nY, nX+30, nY); line(nX, nY-30, nX, nY+30);
+      }
 
-        drawingContext.save();
-        beginShape();
-        vertex(-(pts[10][0] - noseX), -(pts[10][1] - noseY) - 80); 
-        for (let i of silhouetteIndices) { vertex(-(pts[i][0] - noseX), -(pts[i][1] - noseY)); }
-        endShape(CLOSE);
-        drawingContext.clip();
+      drawingContext.restore(); 
 
-        push(); scale(-1, 1); 
-        let rO = map(cPitch, 0, 24, 0, 30);
-        blendMode(SCREEN);
-        tint(255, 0, 50, 200); image(video, -noseX - rO, -noseY);
-        tint(0, 255, 255, 200); image(video, -noseX + rO, -noseY);
-        tint(255, 255, 255, 255); image(video, -noseX, -noseY);
-        blendMode(BLEND);
-        pop();
-        drawingContext.restore(); 
+      // Bordo Sovrapposto (L'intelaiatura del Casco)
+      drawHelmetOverlay(hudW, hudH);
+      pop();
+    }
 
-        let faceW = dist(pts[234][0], pts[234][1], pts[454][0], pts[454][1]) * 1.6; 
-        drawHelmet(faceW);
-        
-        stroke(0, 255, 255, 80); strokeWeight(1);
-        line(-20, 0, 20, 0); line(0, -20, 0, 20); noFill(); ellipse(0, 0, 30, 30);
+    // --- FUNZIONI GRAFICHE EXTRA ---
+    function drawNeonGrid() {
+      push();
+      background(5, 0, 15, 200); // Sfondo scuro e profondo
+      stroke(255, 0, 255, 120);  // Fucsia synthwave
+      strokeWeight(2);
+      
+      let gridY = 80; // Orizzonte abbassato
+      
+      // Sole Cibernetico
+      noStroke(); fill(0, 255, 255, 40); ellipse(0, gridY, 250, 120); fill(0, 255, 255, 80); ellipse(0, gridY, 120, 60);
+      
+      stroke(0, 255, 255, 100);
+      let t = (frameCount * 1.5) % 40;
+      
+      // Linee orizzontali in movimento
+      for (let i = 0; i < 15; i++) {
+        let y = gridY + pow(i + (t/40), 2) * 2;
+        if (y < 350) { line(-400, y, 400, y); }
+      }
+      // Linee verticali prospettiche
+      for (let i = -10; i <= 10; i++) {
+        let xBase = i * 40; let xBottom = i * 200;
+        line(xBase, gridY, xBottom, 350);
       }
       pop();
+    }
+
+    function drawHelmetOverlay(w, h) {
+      push();
+      stroke(0, 255, 255, 200); strokeWeight(4); noFill();
+      beginShape();
+      vertex(-w/2 + 50, -h/2); vertex(w/2 - 50, -h/2); vertex(w/2, -h/2 + 50); vertex(w/2, h/2 - 50);
+      vertex(w/2 - 50, h/2); vertex(-w/2 + 50, h/2); vertex(-w/2, h/2 - 50); vertex(-w/2, -h/2 + 50);
+      endShape(CLOSE);
+      // Dettagli tecnici HUD
+      strokeWeight(1); fill(0, 255, 255, 50);
+      rect(-w/2, -20, 15, 40); rect(w/2 - 15, -20, 15, 40);
+      pop();
+    }
+
+    class Star {
+      constructor() { this.x = random(-width, width); this.y = random(-height, height); this.z = random(width); this.pz = this.z; }
+      update(speed) { this.z -= speed; if (this.z < 1) { this.z = width; this.x = random(-width, width); this.y = random(-height, height); this.pz = this.z; } }
+      show() {
+        let sx = map(this.x / this.z, 0, 1, 0, width); let sy = map(this.y / this.z, 0, 1, 0, height);
+        let px = map(this.x / this.pz, 0, 1, 0, width); let py = map(this.y / this.pz, 0, 1, 0, height);
+        this.pz = this.z;
+        stroke(200, 255, 255, map(this.z, 0, width, 255, 0)); strokeWeight(map(this.z, 0, width, 3, 0)); line(px, py, sx, sy);
+      }
     }
 
     function aggiornaInterfacciaHTML(db, vol) {
@@ -376,60 +436,34 @@
       let peakText = (db === -Infinity) ? "-INF" : db.toFixed(1);
       document.getElementById('txt-peak').innerText = `MIC.PEAK: [${peakText} dB]`;
 
-      let vuFill = document.getElementById('vu-meter-fill');
-      let statusText = document.getElementById('hud-status');
+      let vuFill = document.getElementById('vu-meter-fill'); let statusText = document.getElementById('hud-status');
       let isCritical = vol > 0.85; 
 
       vuFill.style.width = (vol * 100) + '%';
-
       if (isCritical) {
-        vuFill.style.background = '#ff0032';
-        statusText.style.color = '#ff0032';
-        statusText.innerText = (frameCount % 10 < 5) ? "⚠ INTEGRITÀ CRITICA ⚠" : "OVERLOAD";
-        document.body.classList.add('alert-state');
+        vuFill.style.background = '#ff0032'; statusText.style.color = '#ff0032';
+        statusText.innerText = (frameCount % 10 < 5) ? "⚠ INTEGRITÀ CRITICA ⚠" : "OVERLOAD"; document.body.classList.add('alert-state');
       } else {
-        vuFill.style.background = '#0ff';
-        statusText.style.color = '#0ff';
-        statusText.innerText = "SISTEMA AUDIO PRIMARIO";
-        document.body.classList.remove('alert-state');
+        vuFill.style.background = '#0ff'; statusText.style.color = '#0ff';
+        statusText.innerText = "SISTEMA AUDIO PRIMARIO"; document.body.classList.remove('alert-state');
       }
     }
 
     function drawFluidSynapses() {
-      let baseCol = color(0, 255, 255, 40);
-      strokeWeight(4); noFill();
+      let baseCol = color(0, 255, 255, 40); strokeWeight(4); noFill();
       function streamFluid(endX, endY, intensity, activeColor) {
         stroke(intensity > 0.1 ? activeColor : baseCol);
         let floatOffset = sin(frameCount * 0.05 + endX) * 30;
-        let cX1 = endX * 0.3; let cY1 = endY * 0.8 + floatOffset; 
-        let cX2 = endX * 0.7; let cY2 = endY * 0.2 + floatOffset;
+        let cX1 = endX * 0.3; let cY1 = endY * 0.8 + floatOffset; let cX2 = endX * 0.7; let cY2 = endY * 0.2 + floatOffset;
         bezier(0, 0, cX1, cY1, cX2, cY2, endX, endY);
-        
         if (intensity > 0.1) {
-          let t = (frameCount * 0.03 * (1 + intensity*2)) % 1; 
-          let px = bezierPoint(0, cX1, cX2, endX, t); 
-          let py = bezierPoint(0, cY1, cY2, endY, t);
-          noStroke(); fill(activeColor); ellipse(px, py, 15 + intensity*10, 15 + intensity*10); 
-          fill(255); ellipse(px, py, 6, 6); noFill();
+          let t = (frameCount * 0.03 * (1 + intensity*2)) % 1; let px = bezierPoint(0, cX1, cX2, endX, t); let py = bezierPoint(0, cY1, cY2, endY, t);
+          noStroke(); fill(activeColor); ellipse(px, py, 15 + intensity*10, 15 + intensity*10); fill(255); ellipse(px, py, 6, 6); noFill();
         }
       }
       streamFluid(0, -height/2, cFlange, color(255, 200, 0)); 
       streamFluid(-width/2, 0, cVocoder, color(255, 0, 255)); 
       streamFluid(width/2, 0, cPitch/24, color(0, 150, 255)); 
-    }
-
-    function drawHelmet(w) {
-      push(); 
-      stroke(0, 255, 255, 150); noFill(); strokeWeight(3);
-      let h = w; 
-      arc(0, -h/4, w*0.9, h*0.5, PI, 0); 
-      line(-w*0.45, -h/4, -w*0.4, h/4); line(w*0.45, -h/4, w*0.4, h/4);
-      strokeWeight(1); for(let i=-20; i<=20; i+=10) { line(i, h/3, i, h/2); }
-      if (cSpace > 0.1) {
-        noStroke(); fill(0, 255, 255, cSpace * 100); ellipse(0, h/4, 80 * cSpace, 80 * cSpace);
-      }
-      imageMode(CENTER); image(customHelmetImg, 0, 0, w * 1.8, w * 1.8);
-      pop();
     }
 
     window.showTutorial = function(type) {
@@ -441,8 +475,7 @@
     }
 
     window.emergencyMute = () => { 
-      Tone.Destination.mute = !Tone.Destination.mute; 
-      let btn = document.getElementById('panic');
+      Tone.Destination.mute = !Tone.Destination.mute; let btn = document.getElementById('panic');
       btn.innerText = Tone.Destination.mute ? "⚠ SBLOCCA MOTORI" : "⚠ TAGLIO MOTORI"; 
       if(Tone.Destination.mute) btn.style.background = "#ff0032"; else btn.style.background = "rgba(255, 0, 50, 0.2)";
     };
