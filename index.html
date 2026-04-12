@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // VOCODER CALIBRATO</title>
+  <title>VOID RIDER // AUDIO CALIBRATION FIX</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -30,11 +30,6 @@
       100% { transform: scale(1.5) rotate(360deg); }
     }
 
-    /* =============================================================
-      UI LAYER - AREA WEB DESIGN 
-      Tutto ciò che è qui dentro è puro HTML/CSS manipolabile
-      =============================================================
-    */
     #ui-layer { 
       position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; 
       z-index: 100; pointer-events: none; 
@@ -85,8 +80,8 @@
       position: absolute; display: none; top: 50%; transform: translateY(-50%);
       font-size: 1.1rem; line-height: 2; color: #0ff; text-shadow: 0 0 5px #0ff;
     }
-    #telemetry-left { left: 150px; }
-    #system-right { right: 150px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
+    #telemetry-left { left: 40px; }
+    #system-right { right: 40px; text-align: right; color: rgba(0, 255, 255, 0.7); font-size: 1rem;}
 
     #hud-bottom {
       position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
@@ -190,7 +185,6 @@
       canvas.style('position', 'fixed');
       canvas.style('top', '0');
       canvas.style('left', '0');
-      // Il canvas grafico resta sotto la UI Web
       canvas.style('z-index', '10'); 
 
       for (let i = 0; i < 500; i++) stars.push(new Star());
@@ -238,22 +232,24 @@
         
         pitchShift = new Tone.PitchShift(0); pitchShift.windowSize = 0.05; pitchShift.wet.value = 0;
         
-        // --- VOCODER ENGINE RICALIBRATO ---
+        // --- VOCODER/WHOBBLE RICALIBRATO ---
         vocoderBit = new Tone.BitCrusher(4); 
         vocoderBit.wet.value = 0;
         
         vocoderWah = new Tone.AutoWah({
-          baseFrequency: 100,
-          octaves: 5,
-          sensitivity: 10, // Aumentato per richiedere più volume
-          Q: 3,            // Abbassato per evitare fischi taglienti
-          gain: 5,         // Ridotto il volume interno per prevenire Larsen
-          follower: { attack: 0.1, release: 0.5 } // Reso molto più fluido
+          baseFrequency: 250, // Alzato per catturare le frequenze vocali, non i rimbombi bassi
+          octaves: 4.5,       
+          sensitivity: 5,     // Leggermente più sensibile per farlo aprire bene
+          Q: 6,               // Risonanza più marcata per un effetto synth più intenso
+          gain: 3,            // Gain interno moderato
+          follower: { attack: 0.05, release: 0.3 } // Rilasci rapidi per evitare l'effetto fangoso
         });
         vocoderWah.wet.value = 0;
-        // ----------------------------------
-
-        flanger = new Tone.Chorus({ frequency: 0.15, delayTime: 1.5, depth: 1, feedback: 0.65 }).start(); flanger.wet.value = 0; 
+        
+        // --- FLANGER RICALIBRATO ---
+        // Feedback ripristinato a 0.85 per ridare l'effetto JET potente.
+        flanger = new Tone.Chorus({ frequency: 0.1, delayTime: 2.5, depth: 0.8, feedback: 0.85 }).start(); 
+        flanger.wet.value = 0; 
         
         spaceDelay = new Tone.FeedbackDelay("8n", 0.4); spaceDelay.wet.value = 0;
         spaceReverb = new Tone.Freeverb({ roomSize: 0.75, dampening: 2500 }); spaceReverb.wet.value = 0;
@@ -306,9 +302,7 @@
 
         let tPitch = 0, tVocoder = 0;
         
-        // --- DEADZONE ALLARGATA PER IL VOCODER ---
         if (nX < -0.05) tPitch = map(nX, -0.05, -0.4, 0, 24, true); 
-        // Ora richiede una deviazione del 15% (0.15) prima di accendersi, invece del 5%
         else if (nX > 0.15) tVocoder = map(nX, 0.15, 0.4, 0, 1, true); 
         
         cPitch = lerp(cPitch, tPitch, 0.2); 
