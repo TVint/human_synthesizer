@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>VOID RIDER // CYBER COCKPIT OPTIMIZED</title>
+  <title>VOID RIDER // SCI-FI HUD OPTIMIZED</title>
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <script src="https://unpkg.com/ml5@0.12.2/dist/ml5.min.js"></script>
@@ -103,7 +103,7 @@
   <div id="ui-layer">
     <div id="boot-screen">
       <h1>VOID RIDER</h1>
-      <p id="boot-status">Avvio Moduli AI in corso. Potrebbe richiedere 10-15 secondi...</p>
+      <p id="boot-status">Calibrazione Rete Neurale Facemesh in corso...</p>
       <button class="btn" id="action-btn" disabled>ATTENDERE...</button>
     </div>
 
@@ -155,22 +155,16 @@
   <script>
     let videoReady = false;
     let audioReady = false;
-    let facemeshReady = false;
-    let bodypixReady = false;
 
-    let video, facemesh, bodypix;
-    let predictions = [];
-    let segmentationMask = null;
-    let personBuffer; 
-
+    let video, facemesh, predictions = [];
     let preAmp, noiseGate, antiLarsenEQ, pitchShift, vocoderWah, vocoderBit, flanger, spaceDelay, spaceReverb, meter, analyzer;
     let cPitch = 0, cVocoder = 0, cFlange = 0, cSpace = 0;
     let stars = [];
     let customHelmetImg; 
 
-    // HUD DIMENSIONS OTTIMIZZATE
-    const HUD_W = 350;
-    const HUD_H = 450;
+    // DIMENSIONI OBLÒ OTTIMIZZATE (Più compatto per non nascondere i cavi)
+    const HUD_W = 400;
+    const HUD_H = 500;
 
     const silhouetteIndices = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
 
@@ -196,38 +190,19 @@
       canvas.style('left', '0');
       canvas.style('z-index', '10'); 
 
-      // Buffer olografico per la persona scalato a 800x600 per mostrare fino al petto
-      personBuffer = createGraphics(800, 600); 
-
       for (let i = 0; i < 300; i++) stars.push(new Star());
 
+      // Rimozione BodyPix. Inizializziamo solo FaceMesh (Veloce e Reattivo)
       video = createCapture(VIDEO, () => {
         video.size(640, 480);
-        
-        facemesh = ml5.facemesh(video, () => { facemeshReady = true; checkAI(); });
-        facemesh.on("predict", r => predictions = r);
-
-        const bpOptions = { multiplier: 0.5, outputStride: 16, segmentationThreshold: 0.5 };
-        bodypix = ml5.bodyPix(video, bpOptions, () => {
-          bodypixReady = true; checkAI();
-          bodypix.segment(video, gotSegmentation);
+        facemesh = ml5.facemesh(video, () => { 
+          videoReady = true; 
+          document.getElementById('boot-status').innerText = "Rete Neurale Pronta. In attesa di consenso Audio.";
+          let btn = document.getElementById('action-btn'); btn.innerText = "ESTABLISH LINK"; btn.disabled = false;
         });
+        facemesh.on("predict", r => predictions = r);
       });
       video.hide();
-    }
-
-    function checkAI() {
-      if (facemeshReady && bodypixReady) {
-        videoReady = true;
-        document.getElementById('boot-status').innerText = "Sistemi Allineati. In attesa di consenso Audio.";
-        let btn = document.getElementById('action-btn'); btn.innerText = "ESTABLISH LINK"; btn.disabled = false;
-      }
-    }
-
-    // gotSegmentation asincrono
-    function gotSegmentation(error, result) {
-      if (result && result.personMask) segmentationMask = result.personMask;
-      if (videoReady) bodypix.segment(video, gotSegmentation);
     }
 
     document.getElementById('mic-gain').addEventListener('input', (e) => {
@@ -286,7 +261,7 @@
         let nX = (pts[1][0] - video.width/2) / (video.width/2); 
         let nY = (pts[1][1] - video.height/2) / (video.height/2);
 
-        // REINSERITO IL SENSORE DEL RESPIRO (EFFETTO ECHO)
+        // IL SENSORE DEL RESPIRO È QUI (Punti 13 e 14 della bocca)
         let mDist = dist(pts[13][0], pts[13][1], pts[14][0], pts[14][1]);
         cSpace = lerp(cSpace, mDist > 8 ? map(mDist, 8, 25, 0, 1, true) : 0, 0.2);
         spaceDelay.wet.value = cSpace; spaceReverb.wet.value = cSpace;
@@ -309,16 +284,16 @@
       beginShape(); for (let i = 0; i < wave.length; i++) { vertex(map(i, 0, wave.length, -250, 250), wave[i] * 60); } endShape();
       fill(0, 255, 255, 10); noStroke(); ellipse(0, 0, 500, 40); pop();
 
-      // --- IL NUOVO CASCO OLOGRAFICO ---
       push();
       let shake = vol > 0.85 ? random(-15, 15) : 0;
       translate(width/2 + shake, height/2 + shake);
 
-      // Disegna Fluid Synapses PRIMA del casco, così fluiscono dai lati della cabina verso il casco
+      // 1. FLUID SYNAPSES DISEGNATE PRIMA DELL'OBLÒ
+      // Partono dal centro e si estendono verso l'esterno agganciandosi visivamente agli Hotspot HTML
       drawFluidSynapses();
 
       drawingContext.save();
-      beginShape(); // HUD OTTANGONALE OTTIMIZZATO
+      beginShape(); // FORMA HUD OTTANGONALE
       vertex(-HUD_W/2 + 30, -HUD_H/2); vertex(HUD_W/2 - 30, -HUD_H/2);
       vertex(HUD_W/2, -HUD_H/2 + 30); vertex(HUD_W/2, HUD_H/2 - 30);
       vertex(HUD_W/2 - 30, HUD_H/2); vertex(-HUD_W/2 + 30, HUD_H/2);
@@ -327,68 +302,85 @@
       drawingContext.clip();
 
       // ==========================================
-      // 1. SFONDO CABINA DI PILOTAGGIO (DIETRO)
+      // 2. SFONDO CABINA E FILTRO SCI-FI WEBCAM
       // ==========================================
-      drawCyberCockpit(cPitch, cVocoder, cFlange, vol);
+      drawCockpitBackground(cFlange);
 
-      // ==========================================
-      // 2. MASCHERATURA ESATTA DELLA PERSONA
-      // ==========================================
-      personBuffer.clear();
-      // Scaliamo il video 640x480 a 800x600 per inquadrare petto e spalle
-      personBuffer.image(video, 0, 0, 800, 600); 
+      // Render Video Sci-Fi
+      push(); 
+      scale(-1, 1); // Effetto Specchio essenziale
+      let pW = HUD_W * 1.5; let pH = HUD_H * 1.3; // Video scalato per inquadrare le spalle
       
-      if (segmentationMask) {
-        // Usa destination-out: CANCELLA il video dove la maschera (lo sfondo nero opaco di ml5) è disegnata.
-        // Risultato: Resti solo tu al centro, il resto è trasparente!
-        personBuffer.drawingContext.globalCompositeOperation = 'destination-out';
-        personBuffer.image(segmentationMask, 0, 0, 800, 600);
-        personBuffer.drawingContext.globalCompositeOperation = 'source-over';
-      }
+      // Filtro Olografico Base (Azzurrino Videogame)
+      tint(0, 150, 255, 180); 
+      image(video, -pW/2, -pH/2 + 20, pW, pH);
 
-      // Renderizza Te Stesso (Senza sfondo) SOPRA la cabina di pilotaggio, scalato per adattarsi all'oblò
-      push(); scale(-1, 1); 
-      let rO = map(cPitch, 0, 24, 0, 30);
+      // Effetto Aberrazione/Glitch attivato dal Pitch
+      let rO = map(cPitch, 0, 24, 0, 25);
       blendMode(SCREEN);
-      // Scaliamo il personBuffer (800x600) per adattarlo all'oblò HUD_W*1.2 (per le spalle) x HUD_H*1.2
-      let pW = HUD_W * 1.5; let pH = HUD_H * 1.3;
-      tint(255, 0, 50, 200); image(personBuffer, -pW/2 - rO, -pH/2 + 20, pW, pH);
-      tint(0, 255, 255, 200); image(personBuffer, -pW/2 + rO, -pH/2 + 20, pW, pH);
-      tint(255, 255, 255, 255); image(personBuffer, -pW/2, -pH/2 + 20, pW, pH);
+      tint(255, 0, 50, 100); image(video, -pW/2 - rO, -pH/2 + 20, pW, pH);
+      tint(0, 255, 255, 100); image(video, -pW/2 + rO, -pH/2 + 20, pW, pH);
       blendMode(BLEND);
-      pop();
-      
-      // TRACCIAMENTO FACCIALE SUL NASO (Specchiato e scalato per confermare il tracking)
+
+      // --- MASCHERA DI PUNTI NEURALI SUL VOLTO ---
       if (predictions.length > 0) {
         let pts = predictions[0].scaledMesh;
-        // Mappa le coordinate 640x480 alla scala dell'utente mascherato e specchia
-        let noseX = -(map(pts[1][0], 0, 640, -pW/2, pW/2)); 
-        let noseY = map(pts[1][1], 0, 480, -pH/2 + 20, pH/2 + 20);
-        stroke(0, 255, 255, 150); strokeWeight(1.5); noFill();
-        ellipse(noseX, noseY, 40, 40); line(noseX-30, noseY, noseX+30, noseY); line(noseX, noseY-30, noseX, noseY+30);
+        
+        // Disegna Griglia di Punti
+        stroke(0, 255, 255, 200);
+        strokeWeight(2);
+        beginShape(POINTS);
+        for(let i=0; i<pts.length; i+=2) { // Disegniamo 1 punto su 2 per un look più pulito
+          let mx = map(pts[i][0], 0, 640, -pW/2, pW/2);
+          let my = map(pts[i][1], 0, 480, -pH/2 + 20, -pH/2 + 20 + pH);
+          vertex(mx, my);
+        }
+        endShape();
+
+        // Disegna Contorno Silhouette e Tratti Somatici Chiave
+        noFill(); stroke(255, 0, 255, 180); strokeWeight(1.5);
+        beginShape();
+        for(let i of silhouetteIndices) {
+          let mx = map(pts[i][0], 0, 640, -pW/2, pW/2);
+          let my = map(pts[i][1], 0, 480, -pH/2 + 20, -pH/2 + 20 + pH);
+          vertex(mx, my);
+        }
+        endShape(CLOSE);
       }
+      pop(); // Fine zona specchiata
+
+      // Scanlines CRT
+      stroke(0, 255, 200, 15);
+      strokeWeight(1);
+      for(let i = -HUD_H/2; i < HUD_H/2; i+= 4) { line(-HUD_W/2, i, HUD_W/2, i); }
+
+      // ==========================================
+      // 3. PANNELLI CABINA (SOVRAPPOSTI AL VIDEO)
+      // ==========================================
+      drawCockpitForeground(cPitch, cVocoder, vol);
 
       drawingContext.restore(); 
 
       // ==========================================
-      // 3. OVERLAY CASCO (Vetri e dettagli frontali)
+      // 4. OVERLAY CASCO (Vetri e dettagli frontali)
       // ==========================================
       drawHelmetOverlay(HUD_W, HUD_H);
       pop();
     }
 
-    function drawCyberCockpit(pitchParam, vocoderParam, flangeParam, volParam) {
+    // --- FUNZIONI DI DISEGNO MODULARI ---
+
+    function drawCockpitBackground(flangeParam) {
       push();
-      background(5, 10, 20); // Interno scuro della nave
-      
+      background(5, 10, 20, 180); // Leggermente trasparente per profondità
       let horizon = 50; 
-      let t = frameCount * (1 + flangeParam * 3); // L'effetto Flanger accelera la nave
+      let t = frameCount * (1 + flangeParam * 3); 
       
-      // Sole lontano (all'esterno dell'astronave)
-      noStroke(); fill(0, 255, 255, 40); ellipse(0, horizon, 200, 100); fill(0, 255, 255, 80); ellipse(0, horizon, 100, 50);
+      // Sole lontano
+      noStroke(); fill(0, 255, 255, 30); ellipse(0, horizon, 200, 100); fill(0, 255, 255, 60); ellipse(0, horizon, 100, 50);
 
       // Griglia Pavimento Neon
-      strokeWeight(2); stroke(0, 255, 255, 80);
+      strokeWeight(2); stroke(0, 255, 255, 60);
       for (let i = 0; i < 15; i++) {
         let y = horizon + pow(i + ((t*0.5)%20)/20, 2) * 2;
         if (y < HUD_H/2) line(-HUD_W/2, y, HUD_W/2, y);
@@ -396,22 +388,26 @@
       for (let i = -10; i <= 10; i++) {
         let xBase = i * 30; let xBottom = i * 150; line(xBase, horizon, xBottom, HUD_H/2);
       }
+      pop();
+    }
 
-      // PANNELLO DESTRO: INDICATORE PITCH (Più compatto)
-      push(); translate(HUD_W/2 - 50, 0);
-      stroke(0, 255, 255, 100); fill(0, 15, 30, 200); rect(-30, -120, 60, 240, 5);
+    function drawCockpitForeground(pitchParam, vocoderParam, volParam) {
+      push();
+      // PANNELLO DESTRO: INDICATORE PITCH 
+      push(); translate(HUD_W/2 - 40, 0);
+      stroke(0, 255, 255, 150); fill(0, 15, 30, 220); rect(-20, -120, 40, 240, 3);
       let pY = map(pitchParam, 0, 24, 110, -110);
-      noStroke(); fill(0, 150, 255, 100); rect(-15, pY, 30, 110 - pY);
-      stroke(0, 255, 255); strokeWeight(3); line(-25, pY, 25, pY);
+      noStroke(); fill(0, 150, 255, 150); rect(-10, pY, 20, 110 - pY);
+      stroke(0, 255, 255); strokeWeight(3); line(-15, pY, 15, pY);
       pop();
 
-      // PANNELLO SINISTRO: INDICATORE VOCODER (Più compatto)
-      push(); translate(-HUD_W/2 + 50, 0);
-      stroke(0, 255, 255, 100); fill(0, 15, 30, 200); rect(-30, -120, 60, 240, 5);
-      let vCol = lerpColor(color(0, 255, 255, 50), color(255, 0, 255, 200), vocoderParam);
+      // PANNELLO SINISTRO: INDICATORE VOCODER
+      push(); translate(-HUD_W/2 + 40, 0);
+      stroke(0, 255, 255, 150); fill(0, 15, 30, 220); rect(-20, -120, 40, 240, 3);
+      let vCol = lerpColor(color(0, 255, 255, 80), color(255, 0, 255, 220), vocoderParam);
       noStroke(); fill(vCol); 
       let pulse = sin(frameCount * 0.2) * 10 * vocoderParam;
-      rect(-15 - pulse, -80 - pulse, 30 + pulse*2, 160 + pulse*2, 5);
+      rect(-10 - pulse, -80 - pulse, 20 + pulse*2, 160 + pulse*2, 3);
       pop();
 
       // FLASH ROSSO CABINA
@@ -429,11 +425,33 @@
       vertex(-w/2 + 30, -h/2); vertex(w/2 - 30, -h/2); vertex(w/2, -h/2 + 30); vertex(w/2, h/2 - 30);
       vertex(w/2 - 30, h/2); vertex(-w/2 + 30, h/2); vertex(-w/2, h/2 - 30); vertex(-w/2, -h/2 + 30);
       endShape(CLOSE);
-      // Mirini e dettagli HUD OTTIMIZZATI
-      strokeWeight(1); fill(0, 255, 255, 50);
-      rect(-w/2 + 40, -h/2 + 15, 30, 8); rect(w/2 - 70, -h/2 + 15, 30, 8);
+      
+      // Dettagli HUD Vetro
+      strokeWeight(1); fill(0, 255, 255, 40);
+      rect(-w/2 + 40, -h/2 + 15, 30, 6); rect(w/2 - 70, -h/2 + 15, 30, 6);
+      
+      // Reticolo Centrale di Mira
+      stroke(0, 255, 255, 80);
       line(-15, 0, 15, 0); line(0, -15, 0, 15); ellipse(0,0, 60,60);
       pop();
+    }
+
+    function drawFluidSynapses() {
+      let baseCol = color(0, 255, 255, 40); strokeWeight(4); noFill();
+      function streamFluid(endX, endY, intensity, activeColor) {
+        stroke(intensity > 0.1 ? activeColor : baseCol);
+        let floatOffset = sin(frameCount * 0.05 + endX) * 30;
+        let cX1 = endX * 0.3; let cY1 = endY * 0.8 + floatOffset; let cX2 = endX * 0.7; let cY2 = endY * 0.2 + floatOffset;
+        bezier(0, 0, cX1, cY1, cX2, cY2, endX, endY);
+        if (intensity > 0.1) {
+          let t = (frameCount * 0.03 * (1 + intensity*2)) % 1; let px = bezierPoint(0, cX1, cX2, endX, t); let py = bezierPoint(0, cY1, cY2, endY, t);
+          noStroke(); fill(activeColor); ellipse(px, py, 15 + intensity*10, 15 + intensity*10); fill(255); ellipse(px, py, 6, 6); noFill();
+        }
+      }
+      // I cavi escono visivamente dal centro e vanno verso i margini dello schermo per toccare gli Hotspot HTML
+      streamFluid(0, -height/2 + 50, cFlange, color(255, 200, 0)); // Verso l'alto
+      streamFluid(-width/2 + 100, 0, cVocoder, color(255, 0, 255)); // Verso sinistra
+      streamFluid(width/2 - 100, 0, cPitch/24, color(0, 150, 255)); // Verso destra
     }
 
     function aggiornaInterfacciaHTML(db, vol) {
@@ -450,24 +468,6 @@
         vuFill.style.width = (vol * 100) + '%'; vuFill.style.background = '#0ff'; statusText.style.color = '#0ff';
         statusText.innerText = "SISTEMA AUDIO PRIMARIO"; document.body.classList.remove('alert-state');
       }
-    }
-
-    function drawFluidSynapses() {
-      let baseCol = color(0, 255, 255, 40); strokeWeight(4); noFill();
-      function streamFluid(endX, endY, intensity, activeColor) {
-        stroke(intensity > 0.1 ? activeColor : baseCol);
-        let floatOffset = sin(frameCount * 0.05 + endX) * 30;
-        let cX1 = endX * 0.3; let cY1 = endY * 0.8 + floatOffset; let cX2 = endX * 0.7; let cY2 = endY * 0.2 + floatOffset;
-        bezier(0, 0, cX1, cY1, cX2, cY2, endX, endY);
-        if (intensity > 0.1) {
-          let t = (frameCount * 0.03 * (1 + intensity*2)) % 1; let px = bezierPoint(0, cX1, cX2, endX, t); let py = bezierPoint(0, cY1, cY2, endY, t);
-          noStroke(); fill(activeColor); ellipse(px, py, 15 + intensity*10, 15 + intensity*10); fill(255); ellipse(px, py, 6, 6); noFill();
-        }
-      }
-      // Fluiscono dai lati esterni della cabina verso il casco centrale
-      streamFluid(0, -HUD_H/2, cFlange, color(255, 200, 0)); 
-      streamFluid(-HUD_W/2 - 20, 0, cVocoder, color(255, 0, 255)); 
-      streamFluid(HUD_W/2 + 20, 0, cPitch/24, color(0, 150, 255)); 
     }
 
     window.showTutorial = function(type) {
