@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>STARSHIP TRILOGY // POCKET LITE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Antonio:wght@700&family=Chakra+Petch:wght@700&family=Orbitron:wght@700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body data-app-mode="pocket" data-theme="cyber">
+  <input type="file" id="audio-file-input" accept="audio/*" style="display:none;">
+  <canvas id="bridge-canvas"></canvas>
+  <div id="lut-overlay" aria-hidden="true"></div>
+
+  <div id="ui-layer">
+    <div class="mobile-top hud-reveal hidden">
+      <div class="mobile-header-row">
+        <div class="brand-box">
+          <div class="brand-title" id="brand-title">U.S.S. VENGEANCE</div>
+          <div class="brand-sub">POCKET LITE · ZERO-LAG</div>
+        </div>
+        <div style="display:flex; gap:5px;">
+          <button class="btn danger" id="btn-alert">⚠</button>
+          <a class="btn" href="./mobile.html">📷</a>
+          <a class="btn" href="./index.html">💻</a>
+        </div>
+      </div>
+      <div class="theme-switcher">
+        <button class="theme-btn" data-theme="void">VOID</button>
+        <button class="theme-btn" data-theme="enterprise">ENTERPRISE</button>
+        <button class="theme-btn active" data-theme="cyber">CYBER</button>
+      </div>
+    </div>
+
+    <div class="touch-pad-wrap hud-reveal hidden">
+      <div class="xy-pad" id="xy-pad" style="height:260px;">
+        <span class="xy-label top">▲ WARP FLANGER</span>
+        <span class="xy-label bot">▼ SUB FILTER</span>
+        <span class="xy-label left">◀ VOCODER</span>
+        <span class="xy-label right">PITCH ▶</span>
+        <div id="xy-puck"></div>
+      </div>
+
+      <div class="mobile-hold-row">
+        <button class="hold-btn" id="hold-echo">HOLD · ECHO</button>
+        <button class="hold-btn gold" id="hold-shimmer">HOLD · SHIMMER</button>
+      </div>
+
+      <div class="vu-bg"><div id="vu-fill"></div></div>
+
+      <div class="mobile-audio-bar">
+        <button class="btn primary" id="btn-synth-toggle">■ SYNTH</button>
+        <button class="btn" id="btn-file-pick">📁 MP3</button>
+        <button class="btn" id="btn-mute">🔇 MUTE</button>
+        <button class="btn" id="btn-bypass">FX: ON</button>
+      </div>
+    </div>
+
+    <div id="boot-screen">
+      <h1>POCKET LITE</h1>
+      <p class="boot-sub">App ultra-leggera per qualsiasi smartphone: zero caricamento webcam/WASM, sfondi animati in loop e switch istantaneo tra le 3 plance.</p>
+      <div class="boot-actions">
+        <button class="btn primary large" id="btn-boot-sim">⚡ AVVIA POCKET CONSOLE</button>
+      </div>
+      <div class="boot-links">
+        <a href="./mobile.html">📷 Mobile con Camera</a>
+        <span>·</span>
+        <a href="./index.html">💻 Desktop Bridge</a>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
